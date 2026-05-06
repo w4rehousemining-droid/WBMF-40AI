@@ -26,17 +26,13 @@ TEMPLATE_FILE = "WBMF PO 1011953241 HAJU.xlsx"
 
 
 # =========================================================
-# ROBOTIC LOGISTICS THEME
+# STYLE
 # =========================================================
 
 st.markdown(
     """
     <style>
-    [data-testid="stSidebar"] {
-        display: none;
-    }
-
-    [data-testid="collapsedControl"] {
+    [data-testid="stSidebar"], [data-testid="collapsedControl"] {
         display: none;
     }
 
@@ -44,18 +40,18 @@ st.markdown(
         background:
             radial-gradient(circle at top left, rgba(0,255,170,0.13), transparent 28%),
             radial-gradient(circle at top right, rgba(0,162,255,0.13), transparent 30%),
-            linear-gradient(135deg, #071018 0%, #0b1220 48%, #111827 100%);
+            linear-gradient(135deg, #071018 0%, #0b1220 50%, #111827 100%);
         color: #e5f7ff;
     }
 
     .block-container {
+        max-width: 1500px;
         padding-top: 1.4rem;
         padding-bottom: 2rem;
-        max-width: 1450px;
     }
 
     .robot-header {
-        border: 1px solid rgba(0, 255, 170, 0.35);
+        border: 1px solid rgba(0,255,170,0.35);
         background: linear-gradient(135deg, rgba(13,27,42,0.94), rgba(17,24,39,0.94));
         border-radius: 22px;
         padding: 24px 28px;
@@ -66,9 +62,8 @@ st.markdown(
     .robot-title {
         font-size: 36px;
         font-weight: 900;
-        letter-spacing: 0.5px;
-        margin: 0;
         color: #dffcff;
+        margin: 0;
     }
 
     .robot-subtitle {
@@ -89,10 +84,6 @@ st.markdown(
         margin-top: 14px;
     }
 
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 10px;
-    }
-
     .stTabs [data-baseweb="tab"] {
         background: rgba(15,23,42,0.88);
         border: 1px solid rgba(56,189,248,0.25);
@@ -105,7 +96,16 @@ st.markdown(
         background: linear-gradient(135deg, rgba(0,255,170,0.20), rgba(56,189,248,0.20)) !important;
         border: 1px solid rgba(0,255,170,0.75) !important;
         color: #ffffff !important;
-        box-shadow: 0 0 18px rgba(0,255,170,0.15);
+    }
+
+    .stButton > button,
+    .stDownloadButton > button {
+        border-radius: 14px;
+        border: 1px solid rgba(0,255,170,0.55);
+        background: linear-gradient(135deg, #00b894, #0984e3);
+        color: white;
+        font-weight: 800;
+        padding: 0.75rem 1rem;
     }
 
     [data-testid="stMetric"] {
@@ -113,27 +113,6 @@ st.markdown(
         border: 1px solid rgba(0,255,170,0.25);
         border-radius: 16px;
         padding: 16px;
-        box-shadow: 0 0 20px rgba(0,255,170,0.08);
-    }
-
-    .stButton > button {
-        border-radius: 14px;
-        border: 1px solid rgba(0,255,170,0.55);
-        background: linear-gradient(135deg, #00b894, #0984e3);
-        color: white;
-        font-weight: 800;
-        padding: 0.75rem 1rem;
-        box-shadow: 0 0 22px rgba(0,255,170,0.18);
-    }
-
-    .stDownloadButton > button {
-        border-radius: 14px;
-        border: 1px solid rgba(0,255,170,0.55);
-        background: linear-gradient(135deg, #10b981, #0ea5e9);
-        color: white;
-        font-weight: 800;
-        padding: 0.75rem 1rem;
-        box-shadow: 0 0 22px rgba(14,165,233,0.18);
     }
 
     [data-testid="stFileUploader"] {
@@ -141,32 +120,14 @@ st.markdown(
         border: 1px dashed rgba(0,255,170,0.55);
         border-radius: 20px;
         padding: 20px;
-        box-shadow: inset 0 0 18px rgba(0,255,170,0.06);
     }
 
     textarea {
         font-family: Consolas, monospace !important;
     }
 
-    [data-testid="stAlert"] {
-        border-radius: 15px;
-    }
-
-    h1, h2, h3 {
-        color: #eaffff;
-    }
-
-    label, .stMarkdown, p, span {
+    h1, h2, h3, label, p, span {
         color: #d9f8ff;
-    }
-
-    .picture-panel {
-        border: 1px solid rgba(0,255,170,0.35);
-        background: rgba(15,23,42,0.78);
-        border-radius: 22px;
-        padding: 22px;
-        margin-top: 10px;
-        box-shadow: 0 0 26px rgba(0,255,170,0.09);
     }
     </style>
     """,
@@ -175,69 +136,37 @@ st.markdown(
 
 
 # =========================================================
-# HELPER FUNCTIONS
+# HELPER
 # =========================================================
 
-def write_cell(ws, cell_address, value):
-    ws[cell_address] = value if value not in [None, ""] else "-"
-
-
-def set_cell_safe(ws, cell_address, value):
-    """
-    Tulis value ke cell tanpa merusak merged cell.
-    """
-    cell = ws[cell_address]
+def set_cell_safe(ws, address, value):
+    cell = ws[address]
 
     if not isinstance(cell, MergedCell):
-        cell.value = value
+        cell.value = value if value not in [None, ""] else "-"
         return
 
     for merged_range in ws.merged_cells.ranges:
         if cell.coordinate in merged_range:
-            top_left_cell = ws.cell(
+            top_left = ws.cell(
                 row=merged_range.min_row,
                 column=merged_range.min_col
             )
-            top_left_cell.value = value
+            top_left.value = value if value not in [None, ""] else "-"
             return
 
 
-def clear_cell_safe(ws, cell_address):
-    cell = ws[cell_address]
+def clear_cell_safe(ws, address):
+    cell = ws[address]
 
-    if isinstance(cell, MergedCell):
-        return
-
-    cell.value = None
+    if not isinstance(cell, MergedCell):
+        cell.value = None
 
 
-def clear_range_safe(ws, min_row, max_row, columns):
-    for row in range(min_row, max_row + 1):
+def clear_range_safe(ws, start_row, end_row, columns):
+    for row in range(start_row, end_row + 1):
         for col in columns:
             clear_cell_safe(ws, f"{col}{row}")
-
-
-def clear_picture_sheet(ws_picture, keep_title=True):
-    """
-    Bersihkan sheet PICTURE dari tulisan/gambar lama.
-    Judul tetap dipertahankan.
-    """
-    ws_picture._images = []
-
-    title_value = ws_picture["A1"].value if keep_title else None
-
-    for row in ws_picture.iter_rows():
-        for cell in row:
-            if keep_title and cell.row == 1:
-                continue
-
-            if isinstance(cell, MergedCell):
-                continue
-
-            cell.value = None
-
-    if keep_title:
-        ws_picture["A1"] = title_value if title_value else "PICTURE & ATTACHMENT"
 
 
 def find_row_by_text(ws, text):
@@ -250,220 +179,218 @@ def find_row_by_text(ws, text):
 
 def safe_filename(text):
     text = str(text)
-    invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
-
-    for char in invalid_chars:
+    for char in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
         text = text.replace(char, "-")
-
     return text
+
+
+def split_lines(text):
+    return [
+        line.strip()
+        for line in str(text).splitlines()
+        if line.strip() != ""
+    ]
+
+
+def get_line(lines, index, default=""):
+    return lines[index].strip() if index < len(lines) else default
+
+
+def normalize_text(value, default="-"):
+    value = str(value).strip()
+
+    if value == "" or value.lower() == "nan":
+        return default
+
+    return value
 
 
 def normalize_qty(value, default=1):
     try:
-        if value is None:
-            return default
-
-        value = str(value).strip()
+        value = str(value).strip().replace(",", ".")
 
         if value == "":
             return default
 
-        value = value.replace(",", ".")
-
         number = float(value)
 
         if number.is_integer():
-            number = int(number)
+            return int(number)
 
         return number
-
     except Exception:
         return default
 
 
-def save_uploaded_image_to_temp(uploaded_file):
-    """
-    Simpan gambar upload tanpa mengubah resolusi asli.
-    Yang diubah hanya ukuran tampilan object gambar di Excel.
-    """
+def parse_items(
+    description_text,
+    qty_delivered_text,
+    qty_received_text,
+    job_site_text,
+    destination_text,
+    uom_text
+):
+    descriptions = split_lines(description_text)
+    qty_delivered = split_lines(qty_delivered_text)
+    qty_received = split_lines(qty_received_text)
+    job_sites = split_lines(job_site_text)
+    destinations = split_lines(destination_text)
+    uoms = split_lines(uom_text)
+
+    items = []
+
+    for index, description in enumerate(descriptions):
+        description = normalize_text(description, default="")
+
+        if description == "":
+            continue
+
+        delivered = normalize_qty(
+            get_line(qty_delivered, index, ""),
+            default=1
+        )
+
+        received = normalize_qty(
+            get_line(qty_received, index, ""),
+            default=delivered
+        )
+
+        job_site = normalize_text(
+            get_line(job_sites, index, ""),
+            default="MACO MINING"
+        )
+
+        destination = normalize_text(
+            get_line(destinations, index, ""),
+            default="MACO HAULING"
+        )
+
+        uom = normalize_text(
+            get_line(uoms, index, ""),
+            default="EA"
+        )
+
+        items.append({
+            "description": description,
+            "quantity_delivered": delivered,
+            "quantity_received": received,
+            "job_site": job_site,
+            "destination": destination,
+            "uom": uom
+        })
+
+    return items
+
+
+def preview_dataframe(items):
+    return pd.DataFrame([
+        {
+            "No": idx,
+            "Description / Item Name": item["description"],
+            "Job Site": item["job_site"],
+            "Destination": item["destination"],
+            "Quantity Delivered": item["quantity_delivered"],
+            "Quantity Received": item["quantity_received"],
+            "UOM": item["uom"]
+        }
+        for idx, item in enumerate(items, start=1)
+    ])
+
+
+def clear_picture_sheet(ws_picture):
+    ws_picture._images = []
+
+    title_value = ws_picture["A1"].value or "PICTURE & ATTACHMENT"
+
+    for row in ws_picture.iter_rows():
+        for cell in row:
+            if cell.row == 1:
+                continue
+
+            if isinstance(cell, MergedCell):
+                continue
+
+            cell.value = None
+
+    ws_picture["A1"] = title_value
+
+
+def save_uploaded_image(uploaded_file):
     uploaded_file.seek(0)
 
-    file_ext = os.path.splitext(uploaded_file.name)[1].lower()
+    extension = os.path.splitext(uploaded_file.name)[1].lower()
 
-    if file_ext not in [".png", ".jpg", ".jpeg"]:
-        file_ext = ".png"
+    if extension not in [".png", ".jpg", ".jpeg"]:
+        extension = ".png"
 
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=file_ext)
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=extension)
     temp_file.write(uploaded_file.getbuffer())
     temp_file.close()
 
     return temp_file.name
 
 
-def get_fitted_image_size(image_path, max_width=430, max_height=330):
-    with Image.open(image_path) as img:
-        original_width, original_height = img.size
+def fit_image_size(image_path, max_width=430, max_height=330):
+    with Image.open(image_path) as image:
+        width, height = image.size
 
-    if original_width == 0 or original_height == 0:
-        return max_width, max_height
+    ratio = min(max_width / width, max_height / height)
 
-    ratio = min(
-        max_width / original_width,
-        max_height / original_height
-    )
-
-    display_width = int(original_width * ratio)
-    display_height = int(original_height * ratio)
-
-    return display_width, display_height
+    return int(width * ratio), int(height * ratio)
 
 
-def parse_material_direct_input(bulk_text):
-    """
-    Parse paste langsung dari Excel.
+def insert_pictures(ws_picture, uploaded_images):
+    clear_picture_sheet(ws_picture)
 
-    Aturan:
-    - Kolom pertama = Material Description.
-    - Kolom kedua = Quantity jika ada dan angka.
-    - Kolom ketiga dan seterusnya diabaikan.
-    - Jika Quantity kosong/tidak valid, default = 1.
-    """
+    if not uploaded_images:
+        return
 
-    valid_items = []
+    slots = [
+        "B3", "K3",
+        "B31", "K31",
+        "B59", "K59",
+        "B87", "K87"
+    ]
 
-    for line in bulk_text.splitlines():
-        raw_line = line.strip()
+    for uploaded_file, cell in zip(uploaded_images, slots):
+        image_path = save_uploaded_image(uploaded_file)
 
-        if raw_line == "":
-            continue
+        excel_image = XLImage(image_path)
+        width, height = fit_image_size(image_path)
 
-        columns = [col.strip() for col in raw_line.split("\t")]
+        excel_image.width = width
+        excel_image.height = height
 
-        if len(columns) == 1 and "," in raw_line:
-            columns = [col.strip() for col in raw_line.split(",")]
-
-        material_desc = columns[0].strip() if len(columns) >= 1 else ""
-
-        if material_desc == "":
-            continue
-
-        quantity = 1
-
-        if len(columns) >= 2:
-            quantity = normalize_qty(columns[1], default=1)
-
-        valid_items.append({
-            "material_desc": material_desc,
-            "quantity": quantity,
-            "quantity_received": quantity,
-            "job_site": "MACO MINING",
-            "destination": "MACO HAULING",
-            "uom": "EA"
-        })
-
-    return valid_items
+        ws_picture.add_image(excel_image, cell)
 
 
-def build_preview_dataframe(valid_items):
-    rows = []
+def write_manifest_header(ws, form):
+    set_cell_safe(ws, "E3", form["mf_number"])
+    set_cell_safe(ws, "E4", form["po_sto"])
+    set_cell_safe(ws, "E5", form["insurance_po_number"])
+    set_cell_safe(ws, "E6", form["forwarder"])
+    set_cell_safe(ws, "E7", form["delivery_mode"])
+    set_cell_safe(ws, "E8", form["transportation_type"])
+    set_cell_safe(ws, "E9", form["transportation_name"])
+    set_cell_safe(ws, "E10", form["transportation_capacity"])
+    set_cell_safe(ws, "E11", form["etd"])
+    set_cell_safe(ws, "E12", form["eta"])
+    set_cell_safe(ws, "E13", form["actual_arrival_date"])
 
-    for idx, item in enumerate(valid_items, start=1):
-        rows.append({
-            "No": idx,
-            "Material Description": item["material_desc"],
-            "Quantity": item["quantity"],
-            "Quantity Received": item["quantity_received"],
-            "Job Site": item["job_site"],
-            "Destination": item["destination"],
-            "UOM": item["uom"]
-        })
-
-    return pd.DataFrame(rows)
-
-
-def write_header_direct_to_manifest_waybill(ws_manifest, ws_waybill, form_data):
-    """
-    Menulis header langsung ke Manifest dan Waybill agar Sheet1 bisa dihapus.
-    Mapping ini menggantikan formula seperti =Sheet1!B1, =Sheet1!B2, dst.
-    """
-
-    # Manifest header
-    set_cell_safe(ws_manifest, "E3", form_data["mf_number"])
-    set_cell_safe(ws_manifest, "E4", form_data["po_sto"])
-    set_cell_safe(ws_manifest, "E5", form_data["insurance_po_number"])
-    set_cell_safe(ws_manifest, "E6", form_data["forwarder"])
-    set_cell_safe(ws_manifest, "E7", form_data["delivery_mode"])
-    set_cell_safe(ws_manifest, "E8", form_data["transportation_type"])
-    set_cell_safe(ws_manifest, "E9", form_data["transportation_name"])
-    set_cell_safe(ws_manifest, "E10", form_data["transportation_capacity"])
-    set_cell_safe(ws_manifest, "E11", form_data["etd"])
-    set_cell_safe(ws_manifest, "E12", form_data["eta"])
-    set_cell_safe(ws_manifest, "E13", form_data["actual_arrival_date"])
-
-    set_cell_safe(ws_manifest, "L3", form_data["from_location"])
-    set_cell_safe(ws_manifest, "L8", form_data["to_location"])
-    set_cell_safe(ws_manifest, "L11", form_data["attention"])
-    set_cell_safe(ws_manifest, "L12", form_data["phone"])
-    set_cell_safe(ws_manifest, "L13", form_data["company"])
-
-    # Waybill header
-    set_cell_safe(ws_waybill, "D3", form_data["wb_number"])
+    set_cell_safe(ws, "L3", form["from_location"])
+    set_cell_safe(ws, "L8", form["to_location"])
+    set_cell_safe(ws, "L11", form["attention"])
+    set_cell_safe(ws, "L12", form["phone"])
+    set_cell_safe(ws, "L13", form["company"])
 
 
-def replace_sheet1_formulas_with_values(wb, form_data):
-    """
-    Mengganti formula yang masih mengarah ke Sheet1 menjadi value langsung.
-    Ini penting sebelum Sheet1 dihapus.
-    """
-
-    formula_value_map = {
-        "=Sheet1!B1": form_data["mf_number"],
-        "=Sheet1!B2": form_data["wb_number"],
-        "=Sheet1!B3": form_data["po_sto"],
-        "=Sheet1!B4": form_data["forwarder"],
-        "=Sheet1!B5": form_data["delivery_mode"],
-        "=Sheet1!B6": form_data["insurance_po_number"],
-        "=Sheet1!B7": form_data["transportation_type"],
-        "=Sheet1!B8": form_data["transportation_name"],
-        "=Sheet1!B9": form_data["transportation_capacity"],
-        "=Sheet1!B10": form_data["etd"],
-        "=Sheet1!B11": form_data["eta"],
-        "=Sheet1!B12": form_data["actual_arrival_date"],
-        "=Sheet1!B13": form_data["from_location"],
-        "=Sheet1!B14": form_data["to_location"],
-        "=Sheet1!B15": form_data["attention"],
-        "=Sheet1!B16": form_data["phone"],
-        "=Sheet1!B17": form_data["company"],
-    }
-
-    for ws in wb.worksheets:
-        if ws.title == "Sheet1":
-            continue
-
-        for row in ws.iter_rows():
-            for cell in row:
-                if isinstance(cell, MergedCell):
-                    continue
-
-                if isinstance(cell.value, str) and cell.value.startswith("="):
-                    formula_normalized = (
-                        cell.value
-                        .replace("$", "")
-                        .replace("'", "")
-                        .strip()
-                    )
-
-                    if formula_normalized in formula_value_map:
-                        cell.value = formula_value_map[formula_normalized]
+def write_waybill_header(ws, form):
+    set_cell_safe(ws, "D3", form["wb_number"])
 
 
-def delete_sheet1_from_output(wb):
-    """
-    Hapus Sheet1 dari workbook output.
-    """
+def remove_sheet1_if_exists(wb):
     if "Sheet1" in wb.sheetnames:
-        ws_sheet1 = wb["Sheet1"]
-        wb.remove(ws_sheet1)
+        wb.remove(wb["Sheet1"])
 
     if "Manifest" in wb.sheetnames:
         wb.active = wb.sheetnames.index("Manifest")
@@ -473,165 +400,91 @@ def delete_sheet1_from_output(wb):
 # GENERATE EXCEL
 # =========================================================
 
-def generate_excel(form_data, valid_items, uploaded_images):
+def generate_excel(form, items, uploaded_images):
     wb = load_workbook(TEMPLATE_FILE)
 
-    ws_input = wb["Sheet1"]
     ws_manifest = wb["Manifest"]
     ws_waybill = wb["Waybill"]
     ws_picture = wb["PICTURE"]
 
-    # =====================================================
-    # UPDATE SHEET1 TEMPORARY
-    # =====================================================
-    # Sheet1 hanya dipakai sementara untuk menjaga kompatibilitas template.
-    # Setelah header dipindah ke Manifest/Waybill, Sheet1 dihapus dari output.
+    # Header langsung ke Manifest dan Waybill
+    write_manifest_header(ws_manifest, form)
+    write_waybill_header(ws_waybill, form)
 
-    write_cell(ws_input, "B1", form_data["mf_number"])
-    write_cell(ws_input, "B2", form_data["wb_number"])
-    write_cell(ws_input, "B3", form_data["po_sto"])
-    write_cell(ws_input, "B4", form_data["forwarder"])
-    write_cell(ws_input, "B5", form_data["delivery_mode"])
-    write_cell(ws_input, "B6", form_data["insurance_po_number"])
-    write_cell(ws_input, "B7", form_data["transportation_type"])
-    write_cell(ws_input, "B8", form_data["transportation_name"])
-    write_cell(ws_input, "B9", form_data["transportation_capacity"])
-    write_cell(ws_input, "B10", form_data["etd"])
-    write_cell(ws_input, "B11", form_data["eta"])
-    write_cell(ws_input, "B12", form_data["actual_arrival_date"])
-    write_cell(ws_input, "B13", form_data["from_location"])
-    write_cell(ws_input, "B14", form_data["to_location"])
-    write_cell(ws_input, "B15", form_data["attention"])
-    write_cell(ws_input, "B16", form_data["phone"])
-    write_cell(ws_input, "B17", form_data["company"])
+    # =========================
+    # Manifest Detail
+    # =========================
 
-    # =====================================================
-    # HEADER LANGSUNG KE MANIFEST / WAYBILL
-    # =====================================================
-
-    write_header_direct_to_manifest_waybill(
-        ws_manifest=ws_manifest,
-        ws_waybill=ws_waybill,
-        form_data=form_data
-    )
-
-    # =====================================================
-    # UPDATE MANIFEST
-    # =====================================================
-
-    manifest_start_row = 17
+    manifest_start = 17
     total_qty_row = find_row_by_text(ws_manifest, "Total Quantity")
-    manifest_end_row = total_qty_row - 1 if total_qty_row else 130
+    manifest_end = total_qty_row - 1 if total_qty_row else 130
 
     clear_range_safe(
         ws_manifest,
-        manifest_start_row,
-        manifest_end_row,
+        manifest_start,
+        manifest_end,
         ["A", "B", "C", "I", "K", "P"]
     )
 
-    manifest_row = manifest_start_row
-    total_quantity = 0
+    manifest_row = manifest_start
     manifest_inserted = 0
+    total_quantity = 0
 
-    for idx, item in enumerate(valid_items, start=1):
-        if manifest_row > manifest_end_row:
+    for idx, item in enumerate(items, start=1):
+        if manifest_row > manifest_end:
             break
 
         set_cell_safe(ws_manifest, f"A{manifest_row}", idx)
-        set_cell_safe(ws_manifest, f"B{manifest_row}", form_data["wb_number"])
-        set_cell_safe(ws_manifest, f"C{manifest_row}", item["material_desc"])
-        set_cell_safe(ws_manifest, f"I{manifest_row}", item["quantity"])
+        set_cell_safe(ws_manifest, f"B{manifest_row}", form["wb_number"])
+        set_cell_safe(ws_manifest, f"C{manifest_row}", item["description"])
+        set_cell_safe(ws_manifest, f"I{manifest_row}", item["quantity_delivered"])
         set_cell_safe(ws_manifest, f"K{manifest_row}", item["destination"])
         set_cell_safe(ws_manifest, f"P{manifest_row}", item["uom"])
 
-        total_quantity += item["quantity"]
+        total_quantity += item["quantity_delivered"]
         manifest_inserted += 1
-
-        # Template Manifest memakai jarak 2 row antar item.
         manifest_row += 2
 
     if total_qty_row:
         set_cell_safe(ws_manifest, f"I{total_qty_row}", total_quantity)
 
-    # =====================================================
-    # UPDATE WAYBILL
-    # =====================================================
+    # =========================
+    # Waybill Detail
+    # =========================
 
-    waybill_start_row = 8
+    waybill_start = 8
     prepared_row = find_row_by_text(ws_waybill, "Prepared By")
-    waybill_end_row = prepared_row - 1 if prepared_row else 30
+    waybill_end = prepared_row - 1 if prepared_row else 30
 
     clear_range_safe(
         ws_waybill,
-        waybill_start_row,
-        waybill_end_row,
+        waybill_start,
+        waybill_end,
         ["A", "C", "H", "K", "M", "O"]
     )
 
-    waybill_row = waybill_start_row
+    waybill_row = waybill_start
     waybill_inserted = 0
 
-    for idx, item in enumerate(valid_items, start=1):
-        if waybill_row > waybill_end_row:
+    for idx, item in enumerate(items, start=1):
+        if waybill_row > waybill_end:
             break
 
         set_cell_safe(ws_waybill, f"A{waybill_row}", idx)
-        set_cell_safe(ws_waybill, f"C{waybill_row}", item["material_desc"])
+        set_cell_safe(ws_waybill, f"C{waybill_row}", item["description"])
         set_cell_safe(ws_waybill, f"H{waybill_row}", item["job_site"])
         set_cell_safe(ws_waybill, f"K{waybill_row}", item["destination"])
-        set_cell_safe(ws_waybill, f"M{waybill_row}", item["quantity"])
+        set_cell_safe(ws_waybill, f"M{waybill_row}", item["quantity_delivered"])
         set_cell_safe(ws_waybill, f"O{waybill_row}", item["quantity_received"])
 
         waybill_inserted += 1
         waybill_row += 1
 
-    # =====================================================
-    # UPDATE PICTURE
-    # =====================================================
+    # Picture
+    insert_pictures(ws_picture, uploaded_images)
 
-    clear_picture_sheet(ws_picture, keep_title=True)
-
-    if uploaded_images:
-        picture_slots = [
-            {"cell": "B3", "max_width": 430, "max_height": 330},
-            {"cell": "K3", "max_width": 430, "max_height": 330},
-            {"cell": "B31", "max_width": 430, "max_height": 330},
-            {"cell": "K31", "max_width": 430, "max_height": 330},
-            {"cell": "B59", "max_width": 430, "max_height": 330},
-            {"cell": "K59", "max_width": 430, "max_height": 330},
-            {"cell": "B87", "max_width": 430, "max_height": 330},
-            {"cell": "K87", "max_width": 430, "max_height": 330},
-        ]
-
-        for uploaded_file, slot in zip(uploaded_images, picture_slots):
-            temp_image_path = save_uploaded_image_to_temp(uploaded_file)
-
-            img = XLImage(temp_image_path)
-
-            display_width, display_height = get_fitted_image_size(
-                temp_image_path,
-                max_width=slot["max_width"],
-                max_height=slot["max_height"]
-            )
-
-            img.width = display_width
-            img.height = display_height
-
-            ws_picture.add_image(img, slot["cell"])
-
-    # =====================================================
-    # HAPUS SHEET1 DARI OUTPUT
-    # =====================================================
-    # Sebelum Sheet1 dihapus, semua formula yang masih refer ke Sheet1 diganti value.
-
-    replace_sheet1_formulas_with_values(wb, form_data)
-    delete_sheet1_from_output(wb)
-
-    # Recalculate tidak terlalu dibutuhkan lagi karena formula Sheet1 sudah diganti value,
-    # tapi tetap aman untuk formula lain di workbook.
-    wb.calculation.fullCalcOnLoad = True
-    wb.calculation.forceFullCalc = True
+    # Hapus Sheet1 dari output
+    remove_sheet1_if_exists(wb)
 
     output = BytesIO()
     wb.save(output)
@@ -639,7 +492,7 @@ def generate_excel(form_data, valid_items, uploaded_images):
 
     return {
         "file": output,
-        "total_items_input": len(valid_items),
+        "total_items": len(items),
         "total_quantity": total_quantity,
         "manifest_inserted": manifest_inserted,
         "waybill_inserted": waybill_inserted
@@ -647,7 +500,7 @@ def generate_excel(form_data, valid_items, uploaded_images):
 
 
 # =========================================================
-# STREAMLIT UI
+# UI
 # =========================================================
 
 st.markdown(
@@ -655,12 +508,12 @@ st.markdown(
     <div class="robot-header">
         <p class="robot-title">🤖 WBMF-40AI Logistics Robot</p>
         <div class="robot-subtitle">
-            Direct Excel Paste to Manifest, Waybill & Picture Attachment Generator
+            Direct input to Manifest and Waybill. Sheet1 is not used in output.
         </div>
-        <span class="robot-badge">📦 Direct Manifest Input</span>
-        <span class="robot-badge">🚚 Direct Waybill Input</span>
-        <span class="robot-badge">🧠 Sheet1 Removed on Output</span>
-        <span class="robot-badge">🖼️ Auto Picture Clean</span>
+        <span class="robot-badge">📦 Manifest Direct</span>
+        <span class="robot-badge">🚚 Waybill Direct</span>
+        <span class="robot-badge">🧾 Sheet1 Removed</span>
+        <span class="robot-badge">🖼️ Picture Auto Clean</span>
     </div>
     """,
     unsafe_allow_html=True
@@ -668,203 +521,156 @@ st.markdown(
 
 if not os.path.exists(TEMPLATE_FILE):
     st.error(f"Template Excel tidak ditemukan: {TEMPLATE_FILE}")
-    st.info("Pastikan file template Excel ada satu folder dengan app.py.")
+    st.info("Pastikan file template Excel berada satu folder dengan app.py.")
     st.stop()
 
 
 tab1, tab2, tab3 = st.tabs([
-    "🤖 Header Manifest / Waybill",
-    "📦 Direct Material Paste",
-    "🖼️ Picture Bay"
+    "🤖 Header",
+    "📦 Excel Column Input",
+    "🖼️ Picture"
 ])
 
 
 # =========================================================
-# TAB 1 - HEADER
+# HEADER
 # =========================================================
 
 with tab1:
-    st.subheader("🤖 Header Manifest / Waybill")
-    st.caption("Input ini langsung ditulis ke Manifest dan Waybill. Sheet1 akan dihapus dari file download.")
+    st.subheader("🤖 Header Manifest dan Waybill")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        mf_number = st.text_input(
-            "MF Number",
-            value="MF40AI-02052026/MACOMINING/02"
-        )
-
-        wb_number = st.text_input(
-            "WB Number",
-            value="WB40AI-02052026/MACOMINING/02"
-        )
-
-        po_sto = st.text_input(
-            "PO / STO",
-            value="1011953241"
-        )
-
-        forwarder = st.text_input(
-            "Forwarder / Pengirim",
-            value="-"
-        )
-
-        delivery_mode = st.selectbox(
-            "Delivery Mode",
-            ["LAND", "SEA", "AIR"],
-            index=0
-        )
-
-        insurance_po_number = st.text_input(
-            "Insurance PO Number",
-            value="-"
-        )
-
-        transportation_type = st.text_input(
-            "Transportation Type",
-            value="-"
-        )
-
-        transportation_name = st.text_input(
-            "Transportation Name",
-            value="-"
-        )
-
-        transportation_capacity = st.text_input(
-            "Transportation Capacity",
-            value="-"
-        )
+        mf_number = st.text_input("MF Number", "MF40AI-02052026/MACOMINING/02")
+        wb_number = st.text_input("WB Number", "WB40AI-02052026/MACOMINING/02")
+        po_sto = st.text_input("PO / STO", "1011953241")
+        forwarder = st.text_input("Forwarder / Pengirim", "-")
+        delivery_mode = st.selectbox("Delivery Mode", ["LAND", "SEA", "AIR"])
+        insurance_po_number = st.text_input("Insurance PO Number", "-")
+        transportation_type = st.text_input("Transportation Type", "-")
+        transportation_name = st.text_input("Transportation Name", "-")
+        transportation_capacity = st.text_input("Transportation Capacity", "-")
 
     with col2:
-        etd = st.text_input(
-            "Estimated Time of Departure",
-            value="May, 02 2026"
-        )
-
-        eta = st.text_input(
-            "Estimated Time of Arrival",
-            value="May, 02 2026"
-        )
-
-        actual_arrival_date = st.text_input(
-            "Actual Arrival Date",
-            value="-"
-        )
-
-        from_location = st.text_area(
-            "From",
-            value="PT. SAPTAINDRA SEJATI SITE MACO MINING"
-        )
-
-        to_location = st.text_area(
-            "To",
-            value="PT. SAPTAINDRA SEJATI SITE MACO HAULING"
-        )
-
-        attention = st.text_input(
-            "Attention / Penerima",
-            value="Bapak Fachry"
-        )
-
-        phone = st.text_input(
-            "Phone",
-            value="+62 812-8347-1699"
-        )
-
-        company = st.text_input(
-            "Company",
-            value="PT SAPTAINDRA SEJATI"
-        )
+        etd = st.text_input("Estimated Time of Departure", "May, 02 2026")
+        eta = st.text_input("Estimated Time of Arrival", "May, 02 2026")
+        actual_arrival_date = st.text_input("Actual Arrival Date", "-")
+        from_location = st.text_area("From", "PT. SAPTAINDRA SEJATI SITE MACO MINING")
+        to_location = st.text_area("To", "PT. SAPTAINDRA SEJATI SITE MACO HAULING")
+        attention = st.text_input("Attention / Penerima", "Bapak Fachry")
+        phone = st.text_input("Phone", "+62 812-8347-1699")
+        company = st.text_input("Company", "PT SAPTAINDRA SEJATI")
 
 
 # =========================================================
-# TAB 2 - DIRECT MATERIAL PASTE
+# ITEM INPUT
 # =========================================================
 
 with tab2:
-    st.subheader("📦 Direct Material Paste")
-    st.caption(
-        "Paste langsung dari Excel. Sistem mengambil kolom pertama sebagai Material dan kolom kedua sebagai Quantity jika ada. "
-        "Kolom lain otomatis diabaikan."
-    )
+    st.subheader("📦 Input Sesuai Kolom Manifest dan Waybill")
+    st.caption("Copy kolom dari Excel ke bawah, lalu paste ke box yang sesuai.")
 
-    bulk_material_text = st.text_area(
-        "Paste Material dari Excel di sini",
-        height=330,
-        placeholder=(
-            "Contoh 1 kolom:\\n"
-            "24122002-0008\\n"
-            "4T-32032X\\n"
-            "4T-32036XE1PX4\\n"
-            "561-22-62970\\n\\n"
-            "Contoh 2 kolom:\\n"
-            "24122002-0008    5\\n"
-            "4T-32032X        2\\n"
-            "4T-32036XE1PX4   1"
+    col_desc, col_qty_del, col_qty_rec = st.columns([3, 1, 1])
+
+    with col_desc:
+        description_text = st.text_area(
+            "Description / Item Name",
+            height=300,
+            placeholder="Paste kolom Description / Item Name"
         )
+
+    with col_qty_del:
+        qty_delivered_text = st.text_area(
+            "Quantity Delivered",
+            height=300,
+            placeholder="Paste Qty Delivered"
+        )
+
+    with col_qty_rec:
+        qty_received_text = st.text_area(
+            "Quantity Received",
+            height=300,
+            placeholder="Opsional"
+        )
+
+    col_job, col_dest, col_uom = st.columns([2, 2, 1])
+
+    with col_job:
+        job_site_text = st.text_area(
+            "Job Site",
+            height=220,
+            placeholder="Opsional. Default: MACO MINING"
+        )
+
+    with col_dest:
+        destination_text = st.text_area(
+            "Destination",
+            height=220,
+            placeholder="Opsional. Default: MACO HAULING"
+        )
+
+    with col_uom:
+        uom_text = st.text_area(
+            "UOM",
+            height=220,
+            placeholder="Opsional. Default: EA"
+        )
+
+    preview_items = parse_items(
+        description_text=description_text,
+        qty_delivered_text=qty_delivered_text,
+        qty_received_text=qty_received_text,
+        job_site_text=job_site_text,
+        destination_text=destination_text,
+        uom_text=uom_text
     )
 
-    valid_items_preview = parse_material_direct_input(bulk_material_text)
-    preview_df = build_preview_dataframe(valid_items_preview)
+    preview_df = preview_dataframe(preview_items)
+    total_qty = sum(item["quantity_delivered"] for item in preview_items)
 
-    total_preview_qty = sum(item["quantity"] for item in valid_items_preview)
+    m1, m2, m3 = st.columns(3)
 
-    col_a, col_b, col_c = st.columns(3)
+    with m1:
+        st.metric("Total Item", len(preview_items))
 
-    with col_a:
-        st.metric("Total Item Detected", len(valid_items_preview))
+    with m2:
+        st.metric("Total Quantity", total_qty)
 
-    with col_b:
-        st.metric("Total Quantity", total_preview_qty)
-
-    with col_c:
-        st.metric("Output Sheets", "3 Sheets")
+    with m3:
+        st.metric("Mode", "Direct Sheet")
 
     if not preview_df.empty:
-        st.markdown("### Preview yang akan masuk ke Manifest / Waybill")
-        st.dataframe(
-            preview_df,
-            use_container_width=True,
-            hide_index=True
-        )
+        st.dataframe(preview_df, use_container_width=True, hide_index=True)
     else:
-        st.info("Belum ada material yang terdeteksi. Paste data material dari Excel terlebih dahulu.")
+        st.info("Paste minimal kolom Description / Item Name terlebih dahulu.")
 
 
 # =========================================================
-# TAB 3 - PICTURE
+# PICTURE
 # =========================================================
 
 with tab3:
-    st.subheader("🖼️ Picture Bay - Logistics Evidence Upload")
-    st.caption("Sheet PICTURE otomatis dibersihkan. Upload gambar akan masuk ke slot attachment.")
-
-    st.markdown('<div class="picture-panel">', unsafe_allow_html=True)
+    st.subheader("🖼️ Picture Attachment")
 
     uploaded_images = st.file_uploader(
-        "Drop / Browse picture attachment",
+        "Upload gambar attachment",
         type=["png", "jpg", "jpeg"],
-        accept_multiple_files=True,
-        help="Upload foto material, packaging, evidence delivery, atau attachment lain."
+        accept_multiple_files=True
     )
 
     if uploaded_images:
-        st.success(f"{len(uploaded_images)} gambar siap diproses oleh Logistics Robot.")
-
-        preview_cols = st.columns(4)
+        cols = st.columns(4)
 
         for idx, uploaded_image in enumerate(uploaded_images):
-            with preview_cols[idx % 4]:
+            with cols[idx % 4]:
                 st.image(
                     uploaded_image,
                     caption=uploaded_image.name,
                     use_container_width=True
                 )
     else:
-        st.info("Picture optional. Jika tidak ada gambar, sheet PICTURE tetap dibersihkan dari data/gambar lama.")
-
-    st.markdown('</div>', unsafe_allow_html=True)
+        st.info("Picture optional. Sheet PICTURE tetap dibersihkan otomatis.")
 
 
 # =========================================================
@@ -893,56 +699,44 @@ form_data = {
     "company": company
 }
 
-generate = st.button(
-    "🤖 Generate Excel - Sheet1 Removed",
-    type="primary",
-    use_container_width=True
-)
+if st.button("🤖 Generate Excel", type="primary", use_container_width=True):
+    items = parse_items(
+        description_text=description_text,
+        qty_delivered_text=qty_delivered_text,
+        qty_received_text=qty_received_text,
+        job_site_text=job_site_text,
+        destination_text=destination_text,
+        uom_text=uom_text
+    )
 
-if generate:
-    valid_items = parse_material_direct_input(bulk_material_text)
-
-    if len(valid_items) == 0:
-        st.warning("Minimal paste 1 material terlebih dahulu.")
+    if not items:
+        st.warning("Minimal paste 1 Description / Item Name.")
     else:
         try:
             result = generate_excel(
-                form_data=form_data,
-                valid_items=valid_items,
+                form=form_data,
+                items=items,
                 uploaded_images=uploaded_images
             )
 
-            safe_po_sto = safe_filename(po_sto)
-            safe_wb_number = safe_filename(wb_number)
-
-            excel_filename = f"WBMF_{safe_po_sto}_{safe_wb_number}.xlsx"
+            filename = f"WBMF_{safe_filename(po_sto)}_{safe_filename(wb_number)}.xlsx"
 
             st.success(
-                f"Mission complete. Excel berhasil dibuat tanpa Sheet1. "
-                f"Input item: {result['total_items_input']}, "
-                f"Manifest inserted: {result['manifest_inserted']}, "
-                f"Waybill inserted: {result['waybill_inserted']}, "
-                f"Total quantity: {result['total_quantity']}"
+                f"Excel berhasil dibuat. "
+                f"Item: {result['total_items']} | "
+                f"Manifest: {result['manifest_inserted']} | "
+                f"Waybill: {result['waybill_inserted']} | "
+                f"Total Qty: {result['total_quantity']}"
             )
 
-            if result["manifest_inserted"] < result["total_items_input"]:
-                st.warning(
-                    "Sebagian item tidak masuk ke Manifest karena area row pada template Manifest sudah penuh."
-                )
-
-            if result["waybill_inserted"] < result["total_items_input"]:
-                st.warning(
-                    "Sebagian item tidak masuk ke Waybill karena area row pada template Waybill sudah penuh."
-                )
-
             st.download_button(
-                label="⬇️ Download Excel Output",
+                label="⬇️ Download Excel",
                 data=result["file"],
-                file_name=excel_filename,
+                file_name=filename,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
             )
 
         except Exception as error:
-            st.error("Generate file gagal.")
+            st.error("Generate gagal.")
             st.code(str(error))
