@@ -1,6 +1,7 @@
 import os
 import tempfile
 from io import BytesIO
+from copy import copy
 
 import pandas as pd
 import streamlit as st
@@ -136,37 +137,28 @@ st.markdown(
 
 
 # =========================================================
-# HELPER
+# BASIC HELPERS
 # =========================================================
 
 def set_cell_safe(ws, address, value):
+    """
+    Tulis value ke cell.
+    Header boleh tetap merged. Jika target merged cell, isi top-left cell.
+    """
+    value = value if value not in [None, ""] else "-"
     cell = ws[address]
 
     if not isinstance(cell, MergedCell):
-        cell.value = value if value not in [None, ""] else "-"
+        cell.value = value
         return
 
     for merged_range in ws.merged_cells.ranges:
         if cell.coordinate in merged_range:
-            top_left = ws.cell(
+            ws.cell(
                 row=merged_range.min_row,
                 column=merged_range.min_col
-            )
-            top_left.value = value if value not in [None, ""] else "-"
+            ).value = value
             return
-
-
-def clear_cell_safe(ws, address):
-    cell = ws[address]
-
-    if not isinstance(cell, MergedCell):
-        cell.value = None
-
-
-def clear_range_safe(ws, start_row, end_row, columns):
-    for row in range(start_row, end_row + 1):
-        for col in columns:
-            clear_cell_safe(ws, f"{col}{row}")
 
 
 def find_row_by_text(ws, text):
@@ -198,17 +190,14 @@ def get_line(lines, index, default=""):
 
 def normalize_text(value, default="-"):
     value = str(value).strip()
-
     if value == "" or value.lower() == "nan":
         return default
-
     return value
 
 
 def normalize_qty(value, default=1):
     try:
         value = str(value).strip().replace(",", ".")
-
         if value == "":
             return default
 
@@ -218,9 +207,106 @@ def normalize_qty(value, default=1):
             return int(number)
 
         return number
+
     except Exception:
         return default
 
+
+# =========================================================
+# FORMAT / ROW HELPERS
+# =========================================================
+
+def unhide_rows(ws, start_row, end_row):
+    for row in range(start_row, end_row + 1):
+        ws.row_dimensions[row].hidden = False
+
+
+def unmerge_range_rows(ws, start_row, end_row):
+    """
+    Unmerge hanya area detail.
+    Header tetap merged.
+    Detail dibuat 1 cell normal per kolom.
+    """
+    merged_ranges = list(ws.merged_cells.ranges)
+
+    for merged_range in merged_ranges:
+        if merged_range.max_row >= start_row and merged_range.min_row <= end_row:
+            ws.unmerge_cells(str(merged_range))
+
+
+def copy_cell_style(source, target):
+    if source.has_style:
+        target._style = copy(source._style)
+
+    target.font = copy(source.font)
+    target.fill = copy(source.fill)
+    target.border = copy(source.border)
+    target.alignment = copy(source.alignment)
+    target.number_format = source.number_format
+
+
+def copy_row_format(ws, source_row, target_row, max_col=17):
+    """
+    Copy format row tanpa value.
+    """
+    ws.row_dimensions[target_row].height = ws.row_dimensions[source_row].height
+    ws.row_dimensions[target_row].hidden = False
+
+    for col in range(1, max_col + 1):
+        source = ws.cell(row=source_row, column=col)
+        target = ws.cell(row=target_row, column=col)
+        copy_cell_style(source, target)
+
+
+def clear_values(ws, start_row, end_row, max_col=17):
+    """
+    Hapus value area detail setelah area detail di-unmerge.
+    """
+    for row in range(start_row, end_row + 1):
+        for col in range(1, max_col + 1):
+            cell = ws.cell(row=row, column=col)
+            if not isinstance(cell, MergedCell):
+                cell.value = None
+
+
+def ensure_detail_rows(ws, start_row, marker_text, item_count, style_row):
+    """
+    Pastikan jumlah row cukup untuk item.
+    Detail dibuat 1 item = 1 row.
+    Jika kurang row, insert sebelum marker row.
+    """
+    marker_row = find_row_by_text(ws, marker_text)
+
+    if marker_row is None:
+        marker_row = start_row + 30
+
+    end_row = marker_row - 1
+    required_end_row = start_row + item_count - 1
+
+    if item_count > 0 and required_end_row > end_row:
+        rows_to_add = required_end_row - end_row
+        ws.insert_rows(marker_row, rows_to_add)
+
+        for row in range(marker_row, marker_row + rows_to_add):
+            copy_row_format(ws, style_row, row, max_col=17)
+
+        marker_row = find_row_by_text(ws, marker_text)
+        end_row = marker_row - 1
+
+    unhide_rows(ws, start_row, end_row)
+    unmerge_range_rows(ws, start_row, end_row)
+
+    for row in range(start_row, end_row + 1):
+        copy_row_format(ws, style_row, row, max_col=17)
+
+    clear_values(ws, start_row, end_row, max_col=17)
+
+    return start_row, end_row, marker_row
+
+
+# =========================================================
+# INPUT PARSER
+# =========================================================
 
 def parse_items(
     description_text,
@@ -231,11 +317,11 @@ def parse_items(
     uom_text
 ):
     descriptions = split_lines(description_text)
-    qty_delivered = split_lines(qty_delivered_text)
-    qty_received = split_lines(qty_received_text)
-    job_sites = split_lines(job_site_text)
-    destinations = split_lines(destination_text)
-    uoms = split_lines(uom_text)
+    qty_delivered_lines = split_lines(qty_delivered_text)
+    qty_received_lines = split_lines(qty_received_text)
+    job_site_lines = split_lines(job_site_text)
+    destination_lines = split_lines(destination_text)
+    uom_lines = split_lines(uom_text)
 
     items = []
 
@@ -245,35 +331,35 @@ def parse_items(
         if description == "":
             continue
 
-        delivered = normalize_qty(
-            get_line(qty_delivered, index, ""),
+        qty_delivered = normalize_qty(
+            get_line(qty_delivered_lines, index, ""),
             default=1
         )
 
-        received = normalize_qty(
-            get_line(qty_received, index, ""),
-            default=delivered
+        qty_received = normalize_qty(
+            get_line(qty_received_lines, index, ""),
+            default=qty_delivered
         )
 
         job_site = normalize_text(
-            get_line(job_sites, index, ""),
+            get_line(job_site_lines, index, ""),
             default="MACO MINING"
         )
 
         destination = normalize_text(
-            get_line(destinations, index, ""),
+            get_line(destination_lines, index, ""),
             default="MACO HAULING"
         )
 
         uom = normalize_text(
-            get_line(uoms, index, ""),
+            get_line(uom_lines, index, ""),
             default="EA"
         )
 
         items.append({
             "description": description,
-            "quantity_delivered": delivered,
-            "quantity_received": received,
+            "quantity_delivered": qty_delivered,
+            "quantity_received": qty_received,
             "job_site": job_site,
             "destination": destination,
             "uom": uom
@@ -296,6 +382,10 @@ def preview_dataframe(items):
         for idx, item in enumerate(items, start=1)
     ])
 
+
+# =========================================================
+# PICTURE HELPERS
+# =========================================================
 
 def clear_picture_sheet(ws_picture):
     ws_picture._images = []
@@ -364,7 +454,14 @@ def insert_pictures(ws_picture, uploaded_images):
         ws_picture.add_image(excel_image, cell)
 
 
+# =========================================================
+# HEADER WRITER
+# =========================================================
+
 def write_manifest_header(ws, form):
+    """
+    Header Manifest langsung diisi, tidak pakai Sheet1.
+    """
     set_cell_safe(ws, "E3", form["mf_number"])
     set_cell_safe(ws, "E4", form["po_sto"])
     set_cell_safe(ws, "E5", form["insurance_po_number"])
@@ -385,6 +482,9 @@ def write_manifest_header(ws, form):
 
 
 def write_waybill_header(ws, form):
+    """
+    Header Waybill langsung diisi, tidak pakai Sheet1.
+    """
     set_cell_safe(ws, "D3", form["wb_number"])
 
 
@@ -407,83 +507,87 @@ def generate_excel(form, items, uploaded_images):
     ws_waybill = wb["Waybill"]
     ws_picture = wb["PICTURE"]
 
-    # Header langsung ke Manifest dan Waybill
+    # Header langsung
     write_manifest_header(ws_manifest, form)
     write_waybill_header(ws_waybill, form)
 
-    # =========================
-    # Manifest Detail
-    # =========================
+    # =====================================================
+    # MANIFEST DETAIL
+    # 1 item = 1 row
+    # Row 17, 18, 19, 20, dst.
+    # Tidak pakai merge di detail.
+    # =====================================================
 
-    manifest_start = 17
-    total_qty_row = find_row_by_text(ws_manifest, "Total Quantity")
-    manifest_end = total_qty_row - 1 if total_qty_row else 130
-
-    clear_range_safe(
-        ws_manifest,
-        manifest_start,
-        manifest_end,
-        ["A", "B", "C", "I", "K", "P"]
+    manifest_start, manifest_end, total_qty_row = ensure_detail_rows(
+        ws=ws_manifest,
+        start_row=17,
+        marker_text="Total Quantity",
+        item_count=len(items),
+        style_row=17
     )
 
-    manifest_row = manifest_start
     manifest_inserted = 0
     total_quantity = 0
 
     for idx, item in enumerate(items, start=1):
-        if manifest_row > manifest_end:
+        row = manifest_start + idx - 1
+
+        if row > manifest_end:
             break
 
-        set_cell_safe(ws_manifest, f"A{manifest_row}", idx)
-        set_cell_safe(ws_manifest, f"B{manifest_row}", form["wb_number"])
-        set_cell_safe(ws_manifest, f"C{manifest_row}", item["description"])
-        set_cell_safe(ws_manifest, f"I{manifest_row}", item["quantity_delivered"])
-        set_cell_safe(ws_manifest, f"K{manifest_row}", item["destination"])
-        set_cell_safe(ws_manifest, f"P{manifest_row}", item["uom"])
+        ws_manifest.row_dimensions[row].hidden = False
+
+        ws_manifest[f"A{row}"] = idx
+        ws_manifest[f"B{row}"] = form["wb_number"]
+        ws_manifest[f"C{row}"] = item["description"]
+        ws_manifest[f"I{row}"] = item["quantity_delivered"]
+        ws_manifest[f"K{row}"] = item["destination"]
+        ws_manifest[f"P{row}"] = item["uom"]
 
         total_quantity += item["quantity_delivered"]
         manifest_inserted += 1
-        manifest_row += 2
 
     if total_qty_row:
         set_cell_safe(ws_manifest, f"I{total_qty_row}", total_quantity)
 
-    # =========================
-    # Waybill Detail
-    # =========================
+    # =====================================================
+    # WAYBILL DETAIL
+    # 1 item = 1 row
+    # Row 8, 9, 10, 11, dst.
+    # Tidak pakai merge di detail.
+    # =====================================================
 
-    waybill_start = 8
-    prepared_row = find_row_by_text(ws_waybill, "Prepared By")
-    waybill_end = prepared_row - 1 if prepared_row else 30
-
-    clear_range_safe(
-        ws_waybill,
-        waybill_start,
-        waybill_end,
-        ["A", "C", "H", "K", "M", "O"]
+    waybill_start, waybill_end, prepared_row = ensure_detail_rows(
+        ws=ws_waybill,
+        start_row=8,
+        marker_text="Prepared By",
+        item_count=len(items),
+        style_row=8
     )
 
-    waybill_row = waybill_start
     waybill_inserted = 0
 
     for idx, item in enumerate(items, start=1):
-        if waybill_row > waybill_end:
+        row = waybill_start + idx - 1
+
+        if row > waybill_end:
             break
 
-        set_cell_safe(ws_waybill, f"A{waybill_row}", idx)
-        set_cell_safe(ws_waybill, f"C{waybill_row}", item["description"])
-        set_cell_safe(ws_waybill, f"H{waybill_row}", item["job_site"])
-        set_cell_safe(ws_waybill, f"K{waybill_row}", item["destination"])
-        set_cell_safe(ws_waybill, f"M{waybill_row}", item["quantity_delivered"])
-        set_cell_safe(ws_waybill, f"O{waybill_row}", item["quantity_received"])
+        ws_waybill.row_dimensions[row].hidden = False
+
+        ws_waybill[f"A{row}"] = idx
+        ws_waybill[f"C{row}"] = item["description"]
+        ws_waybill[f"H{row}"] = item["job_site"]
+        ws_waybill[f"K{row}"] = item["destination"]
+        ws_waybill[f"M{row}"] = item["quantity_delivered"]
+        ws_waybill[f"O{row}"] = item["quantity_received"]
 
         waybill_inserted += 1
-        waybill_row += 1
 
     # Picture
     insert_pictures(ws_picture, uploaded_images)
 
-    # Hapus Sheet1 dari output
+    # Sheet1 dihapus dari output
     remove_sheet1_if_exists(wb)
 
     output = BytesIO()
@@ -508,10 +612,10 @@ st.markdown(
     <div class="robot-header">
         <p class="robot-title">🤖 WBMF-40AI Logistics Robot</p>
         <div class="robot-subtitle">
-            Direct input to Manifest and Waybill. Sheet1 is not used in output.
+            Direct input to Manifest and Waybill. Detail dibuat 1 baris per material tanpa merge.
         </div>
-        <span class="robot-badge">📦 Manifest Direct</span>
-        <span class="robot-badge">🚚 Waybill Direct</span>
+        <span class="robot-badge">📦 Manifest Row 17,18,19...</span>
+        <span class="robot-badge">🚚 Waybill Row 8,9,10...</span>
         <span class="robot-badge">🧾 Sheet1 Removed</span>
         <span class="robot-badge">🖼️ Picture Auto Clean</span>
     </div>
@@ -568,8 +672,8 @@ with tab1:
 # =========================================================
 
 with tab2:
-    st.subheader("📦 Input Sesuai Kolom Manifest dan Waybill")
-    st.caption("Copy kolom dari Excel ke bawah, lalu paste ke box yang sesuai.")
+    st.subheader("📦 Input Kolom Excel")
+    st.caption("Copy kolom dari Excel ke bawah. Output detail akan dibuat 1 item = 1 baris.")
 
     col_desc, col_qty_del, col_qty_rec = st.columns([3, 1, 1])
 
@@ -629,16 +733,16 @@ with tab2:
     preview_df = preview_dataframe(preview_items)
     total_qty = sum(item["quantity_delivered"] for item in preview_items)
 
-    m1, m2, m3 = st.columns(3)
+    metric_1, metric_2, metric_3 = st.columns(3)
 
-    with m1:
+    with metric_1:
         st.metric("Total Item", len(preview_items))
 
-    with m2:
+    with metric_2:
         st.metric("Total Quantity", total_qty)
 
-    with m3:
-        st.metric("Mode", "Direct Sheet")
+    with metric_3:
+        st.metric("Detail Mode", "1 Row")
 
     if not preview_df.empty:
         st.dataframe(preview_df, use_container_width=True, hide_index=True)
