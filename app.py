@@ -1,54 +1,6 @@
 import os
 import tempfile
-from io import BytesIO
-from copy import copy
-
-import pandas as pd
-import streamlit as st
-from PIL import Image
-
-from openpyxl import load_workbook
-from openpyxl.drawing.image import Image as XLImage
-from openpyxl.cell.cell import MergedCell
-
-
-# =========================================================
-# CONFIG
-# =========================================================
-
-st.set_page_config(
-    page_title="WBMF-40AI Logistics Robot",
-    page_icon="🤖",
-    layout="wide",
-    initial_sidebar_state="collapsed"
-)
-
-TEMPLATE_FILE = "WBMF PO 1011953241 HAJU.xlsx"
-
-
-# =========================================================
-# STYLE
-# =========================================================
-
-st.markdown(
-    """
-    <style>
-    [data-testid="stSidebar"], [data-testid="collapsedControl"] {
-        display: none;
-    }
-
-    .stApp {
-        background:
-            radial-gradient(circle at top left, rgba(0,255,170,0.13), transparent 28%),
-            radial-gradient(circle at top right, rgba(0,162,255,0.13), transparent 30%),
-            linear-gradient(135deg, #071018 0%, #0b1220 50%, #111827 100%);
-        color: #e5f7ff;
-    }
-
-    .block-container {
-        max-width: 1500px;
-        padding-top: 1.4rem;
-        padding-bottom: 2rem;
+ padding-bottom: 2rem;from io import BytesIO
     }
 
     .robot-header {
@@ -142,8 +94,8 @@ st.markdown(
 
 def set_cell_safe(ws, address, value):
     """
-    Tulis value ke cell.
-    Header boleh tetap merged. Jika target merged cell, isi top-left cell.
+    Isi cell biasa atau merged cell.
+    Kalau address adalah bagian merged cell, value ditulis ke top-left cell.
     """
     value = value if value not in [None, ""] else "-"
     cell = ws[address]
@@ -213,7 +165,7 @@ def normalize_qty(value, default=1):
 
 
 # =========================================================
-# FORMAT / ROW HELPERS
+# MERGE / FORMAT HELPERS
 # =========================================================
 
 def unhide_rows(ws, start_row, end_row):
@@ -221,17 +173,57 @@ def unhide_rows(ws, start_row, end_row):
         ws.row_dimensions[row].hidden = False
 
 
-def unmerge_range_rows(ws, start_row, end_row):
+def unmerge_overlapping_ranges(ws, start_row, end_row):
     """
-    Unmerge hanya area detail.
-    Header tetap merged.
-    Detail dibuat 1 cell normal per kolom.
+    Unmerge hanya area detail yang bersentuhan dengan range row detail.
+    Header tidak ikut diubah.
     """
     merged_ranges = list(ws.merged_cells.ranges)
 
     for merged_range in merged_ranges:
         if merged_range.max_row >= start_row and merged_range.min_row <= end_row:
             ws.unmerge_cells(str(merged_range))
+
+
+def merge_if_not_merged(ws, cell_range):
+    current_merges = [str(rng) for rng in ws.merged_cells.ranges]
+
+    if cell_range not in current_merges:
+        ws.merge_cells(cell_range)
+
+
+def apply_manifest_detail_merges(ws, row):
+    """
+    Manifest:
+    A   = No.
+    B   = Waybill No.
+    C:H = Description
+    I:J = Quantity
+    K:O = Destination
+    P:Q = UOM
+    """
+    merge_if_not_merged(ws, f"C{row}:H{row}")
+    merge_if_not_merged(ws, f"I{row}:J{row}")
+    merge_if_not_merged(ws, f"K{row}:O{row}")
+    merge_if_not_merged(ws, f"P{row}:Q{row}")
+
+
+def apply_waybill_detail_merges(ws, row):
+    """
+    Waybill:
+    A:B = No. Item
+    C:G = Description
+    H:J = Job Site
+    K:L = Destination
+    M:N = Quantity Delivered
+    O:P = Quantity Received
+    """
+    merge_if_not_merged(ws, f"A{row}:B{row}")
+    merge_if_not_merged(ws, f"C{row}:G{row}")
+    merge_if_not_merged(ws, f"H{row}:J{row}")
+    merge_if_not_merged(ws, f"K{row}:L{row}")
+    merge_if_not_merged(ws, f"M{row}:N{row}")
+    merge_if_not_merged(ws, f"O{row}:P{row}")
 
 
 def copy_cell_style(source, target):
@@ -258,22 +250,23 @@ def copy_row_format(ws, source_row, target_row, max_col=17):
         copy_cell_style(source, target)
 
 
-def clear_values(ws, start_row, end_row, max_col=17):
+def clear_row_values(ws, row, max_col=17):
     """
-    Hapus value area detail setelah area detail di-unmerge.
+    Clear 1 row detail.
+    Dipakai setelah unmerge dan sebelum merge ulang per baris.
     """
-    for row in range(start_row, end_row + 1):
-        for col in range(1, max_col + 1):
-            cell = ws.cell(row=row, column=col)
-            if not isinstance(cell, MergedCell):
-                cell.value = None
+    for col in range(1, max_col + 1):
+        cell = ws.cell(row=row, column=col)
+
+        if not isinstance(cell, MergedCell):
+            cell.value = None
 
 
 def ensure_detail_rows(ws, start_row, marker_text, item_count, style_row):
     """
-    Pastikan jumlah row cukup untuk item.
-    Detail dibuat 1 item = 1 row.
-    Jika kurang row, insert sebelum marker row.
+    Pastikan row detail cukup.
+    1 item = 1 row.
+    Kalau kurang, insert row sebelum marker.
     """
     marker_row = find_row_by_text(ws, marker_text)
 
@@ -294,12 +287,11 @@ def ensure_detail_rows(ws, start_row, marker_text, item_count, style_row):
         end_row = marker_row - 1
 
     unhide_rows(ws, start_row, end_row)
-    unmerge_range_rows(ws, start_row, end_row)
+    unmerge_overlapping_ranges(ws, start_row, end_row)
 
     for row in range(start_row, end_row + 1):
         copy_row_format(ws, style_row, row, max_col=17)
-
-    clear_values(ws, start_row, end_row, max_col=17)
+        clear_row_values(ws, row, max_col=17)
 
     return start_row, end_row, marker_row
 
@@ -460,7 +452,7 @@ def insert_pictures(ws_picture, uploaded_images):
 
 def write_manifest_header(ws, form):
     """
-    Header Manifest langsung diisi, tidak pakai Sheet1.
+    Header Manifest langsung diisi.
     """
     set_cell_safe(ws, "E3", form["mf_number"])
     set_cell_safe(ws, "E4", form["po_sto"])
@@ -483,7 +475,7 @@ def write_manifest_header(ws, form):
 
 def write_waybill_header(ws, form):
     """
-    Header Waybill langsung diisi, tidak pakai Sheet1.
+    Header Waybill langsung diisi.
     """
     set_cell_safe(ws, "D3", form["wb_number"])
 
@@ -514,8 +506,8 @@ def generate_excel(form, items, uploaded_images):
     # =====================================================
     # MANIFEST DETAIL
     # 1 item = 1 row
-    # Row 17, 18, 19, 20, dst.
-    # Tidak pakai merge di detail.
+    # Row 17, 18, 19, 20...
+    # Merge hanya kolom yang perlu.
     # =====================================================
 
     manifest_start, manifest_end, total_qty_row = ensure_detail_rows(
@@ -537,12 +529,14 @@ def generate_excel(form, items, uploaded_images):
 
         ws_manifest.row_dimensions[row].hidden = False
 
-        ws_manifest[f"A{row}"] = idx
-        ws_manifest[f"B{row}"] = form["wb_number"]
-        ws_manifest[f"C{row}"] = item["description"]
-        ws_manifest[f"I{row}"] = item["quantity_delivered"]
-        ws_manifest[f"K{row}"] = item["destination"]
-        ws_manifest[f"P{row}"] = item["uom"]
+        apply_manifest_detail_merges(ws_manifest, row)
+
+        set_cell_safe(ws_manifest, f"A{row}", idx)
+        set_cell_safe(ws_manifest, f"B{row}", form["wb_number"])
+        set_cell_safe(ws_manifest, f"C{row}", item["description"])
+        set_cell_safe(ws_manifest, f"I{row}", item["quantity_delivered"])
+        set_cell_safe(ws_manifest, f"K{row}", item["destination"])
+        set_cell_safe(ws_manifest, f"P{row}", item["uom"])
 
         total_quantity += item["quantity_delivered"]
         manifest_inserted += 1
@@ -553,8 +547,8 @@ def generate_excel(form, items, uploaded_images):
     # =====================================================
     # WAYBILL DETAIL
     # 1 item = 1 row
-    # Row 8, 9, 10, 11, dst.
-    # Tidak pakai merge di detail.
+    # Row 8, 9, 10, 11...
+    # Merge hanya kolom yang perlu.
     # =====================================================
 
     waybill_start, waybill_end, prepared_row = ensure_detail_rows(
@@ -575,19 +569,21 @@ def generate_excel(form, items, uploaded_images):
 
         ws_waybill.row_dimensions[row].hidden = False
 
-        ws_waybill[f"A{row}"] = idx
-        ws_waybill[f"C{row}"] = item["description"]
-        ws_waybill[f"H{row}"] = item["job_site"]
-        ws_waybill[f"K{row}"] = item["destination"]
-        ws_waybill[f"M{row}"] = item["quantity_delivered"]
-        ws_waybill[f"O{row}"] = item["quantity_received"]
+        apply_waybill_detail_merges(ws_waybill, row)
+
+        set_cell_safe(ws_waybill, f"A{row}", idx)
+        set_cell_safe(ws_waybill, f"C{row}", item["description"])
+        set_cell_safe(ws_waybill, f"H{row}", item["job_site"])
+        set_cell_safe(ws_waybill, f"K{row}", item["destination"])
+        set_cell_safe(ws_waybill, f"M{row}", item["quantity_delivered"])
+        set_cell_safe(ws_waybill, f"O{row}", item["quantity_received"])
 
         waybill_inserted += 1
 
     # Picture
     insert_pictures(ws_picture, uploaded_images)
 
-    # Sheet1 dihapus dari output
+    # Hapus Sheet1 dari output
     remove_sheet1_if_exists(wb)
 
     output = BytesIO()
@@ -612,7 +608,7 @@ st.markdown(
     <div class="robot-header">
         <p class="robot-title">🤖 WBMF-40AI Logistics Robot</p>
         <div class="robot-subtitle">
-            Direct input to Manifest and Waybill. Detail dibuat 1 baris per material tanpa merge.
+            Direct input to Manifest and Waybill. Detail 1 baris per material, merge hanya kolom yang perlu.
         </div>
         <span class="robot-badge">📦 Manifest Row 17,18,19...</span>
         <span class="robot-badge">🚚 Waybill Row 8,9,10...</span>
@@ -673,7 +669,7 @@ with tab1:
 
 with tab2:
     st.subheader("📦 Input Kolom Excel")
-    st.caption("Copy kolom dari Excel ke bawah. Output detail akan dibuat 1 item = 1 baris.")
+    st.caption("Copy kolom dari Excel ke bawah. Output detail 1 item = 1 baris, merge hanya kolom yang perlu.")
 
     col_desc, col_qty_del, col_qty_rec = st.columns([3, 1, 1])
 
@@ -742,7 +738,7 @@ with tab2:
         st.metric("Total Quantity", total_qty)
 
     with metric_3:
-        st.metric("Detail Mode", "1 Row")
+        st.metric("Detail Mode", "1 Row + Merge")
 
     if not preview_df.empty:
         st.dataframe(preview_df, use_container_width=True, hide_index=True)
@@ -844,3 +840,50 @@ if st.button("🤖 Generate Excel", type="primary", use_container_width=True):
         except Exception as error:
             st.error("Generate gagal.")
             st.code(str(error))
+from copy import copy
+
+import pandas as pd
+import streamlit as st
+from PIL import Image
+
+from openpyxl import load_workbook
+from openpyxl.drawing.image import Image as XLImage
+from openpyxl.cell.cell import MergedCell
+
+
+# =========================================================
+# CONFIG
+# =========================================================
+
+st.set_page_config(
+    page_title="WBMF-40AI Logistics Robot",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+TEMPLATE_FILE = "WBMF PO 1011953241 HAJU.xlsx"
+
+
+# =========================================================
+# STYLE
+# =========================================================
+
+st.markdown(
+    """
+    <style>
+    [data-testid="stSidebar"], [data-testid="collapsedControl"] {
+        display: none;
+    }
+
+    .stApp {
+        background:
+            radial-gradient(circle at top left, rgba(0,255,170,0.13), transparent 28%),
+            radial-gradient(circle at top right, rgba(0,162,255,0.13), transparent 30%),
+            linear-gradient(135deg, #071018 0%, #0b1220 50%, #111827 100%);
+        color: #e5f7ff;
+    }
+
+    .block-container {
+        max-width: 1500px;
+        padding-top: 1.4rem;
