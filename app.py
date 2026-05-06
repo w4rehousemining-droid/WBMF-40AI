@@ -30,7 +30,7 @@ TEMPLATE_FILE = "WBMF PO 1011953241 HAJU.xlsx"
 
 def write_cell(ws, cell_address, value):
     """
-    Tulis value ke cell.
+    Tulis value ke cell biasa.
     Dipakai untuk Sheet1.
     """
     ws[cell_address] = value if value not in [None, ""] else "-"
@@ -78,6 +78,35 @@ def clear_range_safe(ws, min_row, max_row, columns):
     for row in range(min_row, max_row + 1):
         for col in columns:
             clear_cell_safe(ws, f"{col}{row}")
+
+
+def clear_picture_sheet(ws_picture, keep_title=True):
+    """
+    Bersihkan sheet PICTURE dari tulisan/data yang tidak perlu.
+    Judul PICTURE & ATTACHMENT di row 1 tetap dipertahankan jika keep_title=True.
+    Gambar lama/contoh juga dihapus.
+    """
+
+    # Hapus semua gambar lama/contoh
+    ws_picture._images = []
+
+    # Simpan title jika ada
+    title_value = ws_picture["A1"].value if keep_title else None
+
+    # Bersihkan semua isi cell, kecuali row 1 jika keep_title=True
+    for row in ws_picture.iter_rows():
+        for cell in row:
+            if keep_title and cell.row == 1:
+                continue
+
+            if isinstance(cell, MergedCell):
+                continue
+
+            cell.value = None
+
+    # Pastikan title tetap ada
+    if keep_title:
+        ws_picture["A1"] = title_value if title_value else "PICTURE & ATTACHMENT"
 
 
 def find_row_by_text(ws, text):
@@ -148,7 +177,7 @@ def prepare_valid_items(items_df):
 def save_uploaded_image_to_temp(uploaded_file):
     """
     Simpan gambar upload ke temporary file tanpa mengubah resolusi asli.
-    Yang akan disesuaikan hanya ukuran tampilan gambar di Excel.
+    Yang disesuaikan hanya ukuran tampilan gambar di Excel.
     """
     uploaded_file.seek(0)
 
@@ -203,11 +232,17 @@ def safe_filename(text):
 # GENERATE EXCEL SESUAI TEMPLATE ASLI
 # =========================================================
 
-def generate_excel(form_data, items_df, uploaded_images, clear_old_pictures=True):
+def generate_excel(
+    form_data,
+    items_df,
+    uploaded_images,
+    clear_picture_content=True
+):
     """
     Generate Excel dengan mempertahankan format template asli.
     Tidak unmerge.
-    Tidak mengubah layout.
+    Tidak mengubah layout Manifest dan Waybill.
+    Sheet PICTURE dibersihkan dari tulisan tidak perlu.
     """
 
     wb = load_workbook(TEMPLATE_FILE)
@@ -323,12 +358,13 @@ def generate_excel(form_data, items_df, uploaded_images, clear_old_pictures=True
         waybill_row += 1
 
     # =====================================================
-    # OPTIONAL PICTURE
+    # UPDATE PICTURE
     # =====================================================
 
-    if clear_old_pictures:
-        # Hapus gambar contoh/lama agar upload baru tidak tertimpa.
-        ws_picture._images = []
+    if clear_picture_content:
+        # Hapus tulisan tidak perlu dan gambar contoh/lama.
+        # Judul PICTURE & ATTACHMENT tetap dipertahankan.
+        clear_picture_sheet(ws_picture, keep_title=True)
 
     if uploaded_images:
         picture_slots = [
@@ -372,83 +408,6 @@ def generate_excel(form_data, items_df, uploaded_images, clear_old_pictures=True
 
 
 # =========================================================
-# CONVERT EXCEL KE PDF SESUAI FORMAT EXCEL
-# =========================================================
-
-def convert_excel_to_pdf(excel_bytes):
-    """
-    Convert Excel hasil generate menjadi PDF dengan format asli Excel.
-    Sheet yang diexport:
-    1. Manifest
-    2. Waybill
-
-    Syarat:
-    - Windows
-    - Microsoft Excel desktop terinstall
-    - pywin32 terinstall
-    """
-
-    try:
-        import pythoncom
-        import win32com.client as win32
-    except Exception as e:
-        raise RuntimeError(
-            "PDF exact format membutuhkan pywin32 dan Microsoft Excel desktop. "
-            "Install dengan: python -m pip install pywin32"
-        ) from e
-
-    pythoncom.CoInitialize()
-
-    temp_dir = tempfile.mkdtemp()
-    excel_path = os.path.join(temp_dir, "WBMF_OUTPUT.xlsx")
-    pdf_path = os.path.join(temp_dir, "WBMF_OUTPUT.pdf")
-
-    with open(excel_path, "wb") as f:
-        f.write(excel_bytes)
-
-    excel_app = None
-    workbook = None
-
-    try:
-        excel_app = win32.DispatchEx("Excel.Application")
-        excel_app.Visible = False
-        excel_app.DisplayAlerts = False
-
-        workbook = excel_app.Workbooks.Open(excel_path)
-
-        # Recalculate formula dari Sheet1 ke Manifest dan Waybill.
-        workbook.RefreshAll()
-        excel_app.CalculateFullRebuild()
-
-        # Export hanya Manifest dan Waybill.
-        workbook.Worksheets(["Manifest", "Waybill"]).Select()
-
-        workbook.ActiveSheet.ExportAsFixedFormat(
-            Type=0,
-            Filename=pdf_path,
-            Quality=0,
-            IncludeDocProperties=True,
-            IgnorePrintAreas=False,
-            OpenAfterPublish=False
-        )
-
-        with open(pdf_path, "rb") as f:
-            pdf_output = BytesIO(f.read())
-
-        pdf_output.seek(0)
-        return pdf_output
-
-    finally:
-        if workbook is not None:
-            workbook.Close(SaveChanges=False)
-
-        if excel_app is not None:
-            excel_app.Quit()
-
-        pythoncom.CoUninitialize()
-
-
-# =========================================================
 # STREAMLIT UI
 # =========================================================
 
@@ -456,7 +415,7 @@ st.title("📦 WBMF-40AI Manifest & Waybill Generator")
 
 st.write(
     "Input data dari Streamlit, lalu generate Excel sesuai template asli. "
-    "PDF dibuat dari Excel agar format Manifest dan Waybill tetap sama."
+    "Fitur PDF sudah dihapus."
 )
 
 if not os.path.exists(TEMPLATE_FILE):
@@ -473,20 +432,14 @@ with st.sidebar:
     st.divider()
 
     st.header("⚙️ Opsi Picture")
-    clear_old_pictures = st.checkbox(
-        "Hapus gambar contoh/lama di sheet PICTURE",
+    clear_picture_content = st.checkbox(
+        "Bersihkan tulisan/gambar lama di sheet PICTURE",
         value=True
     )
 
     st.caption(
-        "Jika dicentang, gambar contoh di sheet PICTURE akan dihapus sebelum gambar baru dimasukkan."
-    )
-
-    st.divider()
-
-    st.header("📄 PDF")
-    st.caption(
-        "PDF exact format membutuhkan Microsoft Excel desktop di Windows."
+        "Jika dicentang, tulisan tidak perlu dan gambar contoh di sheet PICTURE akan dihapus. "
+        "Judul PICTURE & ATTACHMENT tetap dipertahankan."
     )
 
 
@@ -721,7 +674,7 @@ form_data = {
 }
 
 generate = st.button(
-    "🚀 Generate Excel & PDF",
+    "🚀 Generate Excel",
     type="primary",
     use_container_width=True
 )
@@ -737,49 +690,26 @@ if generate:
                 form_data=form_data,
                 items_df=edited_items_df,
                 uploaded_images=uploaded_images,
-                clear_old_pictures=clear_old_pictures
+                clear_picture_content=clear_picture_content
             )
 
             safe_po_sto = safe_filename(po_sto)
             safe_wb_number = safe_filename(wb_number)
 
             excel_filename = f"WBMF_{safe_po_sto}_{safe_wb_number}.xlsx"
-            pdf_filename = f"WBMF_{safe_po_sto}_{safe_wb_number}.pdf"
 
             st.success(
                 f"Excel berhasil dibuat. Total item: {item_count}, "
                 f"Total quantity: {total_quantity}"
             )
 
-            col_download_1, col_download_2 = st.columns(2)
-
-            with col_download_1:
-                st.download_button(
-                    label="⬇️ Download Excel",
-                    data=excel_file,
-                    file_name=excel_filename,
-                    mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                    use_container_width=True
-                )
-
-            with col_download_2:
-                try:
-                    pdf_file = convert_excel_to_pdf(excel_file.getvalue())
-
-                    st.download_button(
-                        label="⬇️ Download PDF Sesuai Format Excel",
-                        data=pdf_file,
-                        file_name=pdf_filename,
-                        mime="application/pdf",
-                        use_container_width=True
-                    )
-
-                except Exception as pdf_error:
-                    st.error("PDF gagal dibuat dari Excel.")
-                    st.info(
-                        "Pastikan Microsoft Excel desktop terinstall dan pywin32 sudah terinstall."
-                    )
-                    st.code(str(pdf_error))
+            st.download_button(
+                label="⬇️ Download Excel",
+                data=excel_file,
+                file_name=excel_filename,
+                mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                use_container_width=True
+            )
 
         except Exception as error:
             st.error("Generate file gagal.")
