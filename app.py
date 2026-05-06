@@ -16,12 +16,185 @@ from openpyxl.cell.cell import MergedCell
 # =========================================================
 
 st.set_page_config(
-    page_title="WBMF-40AI Manifest & Waybill Generator",
-    page_icon="📦",
-    layout="wide"
+    page_title="WBMF-40AI Logistics Robot",
+    page_icon="🤖",
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
 TEMPLATE_FILE = "WBMF PO 1011953241 HAJU.xlsx"
+
+
+# =========================================================
+# CUSTOM THEME CSS - ROBOTIC LOGISTICS
+# =========================================================
+
+st.markdown(
+    """
+    <style>
+    /* Hide sidebar completely */
+    [data-testid="stSidebar"] {
+        display: none;
+    }
+
+    [data-testid="collapsedControl"] {
+        display: none;
+    }
+
+    /* Main background */
+    .stApp {
+        background:
+            radial-gradient(circle at top left, rgba(0, 255, 170, 0.12), transparent 28%),
+            radial-gradient(circle at top right, rgba(0, 162, 255, 0.13), transparent 30%),
+            linear-gradient(135deg, #071018 0%, #0b1220 48%, #111827 100%);
+        color: #e5f7ff;
+    }
+
+    /* Main block */
+    .block-container {
+        padding-top: 1.6rem;
+        padding-bottom: 2rem;
+        max-width: 1400px;
+    }
+
+    /* Header card */
+    .robot-header {
+        border: 1px solid rgba(0, 255, 170, 0.35);
+        background: linear-gradient(135deg, rgba(13, 27, 42, 0.92), rgba(17, 24, 39, 0.92));
+        border-radius: 22px;
+        padding: 24px 28px;
+        box-shadow: 0 0 28px rgba(0, 255, 170, 0.12);
+        margin-bottom: 20px;
+    }
+
+    .robot-title {
+        font-size: 36px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+        margin: 0;
+        color: #dffcff;
+    }
+
+    .robot-subtitle {
+        color: #92f7d5;
+        font-size: 15px;
+        margin-top: 8px;
+    }
+
+    .robot-badge {
+        display: inline-block;
+        padding: 7px 12px;
+        border-radius: 999px;
+        background: rgba(0, 255, 170, 0.10);
+        border: 1px solid rgba(0, 255, 170, 0.35);
+        color: #7cffd2;
+        font-size: 13px;
+        margin-right: 8px;
+        margin-top: 14px;
+    }
+
+    /* Tabs */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 10px;
+    }
+
+    .stTabs [data-baseweb="tab"] {
+        background: rgba(15, 23, 42, 0.88);
+        border: 1px solid rgba(56, 189, 248, 0.25);
+        border-radius: 14px;
+        color: #c7f9ff;
+        padding: 12px 18px;
+    }
+
+    .stTabs [aria-selected="true"] {
+        background: linear-gradient(135deg, rgba(0, 255, 170, 0.20), rgba(56, 189, 248, 0.20)) !important;
+        border: 1px solid rgba(0, 255, 170, 0.75) !important;
+        color: #ffffff !important;
+        box-shadow: 0 0 18px rgba(0, 255, 170, 0.15);
+    }
+
+    /* Input panels */
+    [data-testid="stVerticalBlockBorderWrapper"] {
+        border-color: rgba(56, 189, 248, 0.20) !important;
+    }
+
+    /* Metric cards */
+    [data-testid="stMetric"] {
+        background: rgba(15, 23, 42, 0.88);
+        border: 1px solid rgba(0, 255, 170, 0.25);
+        border-radius: 16px;
+        padding: 16px;
+        box-shadow: 0 0 20px rgba(0, 255, 170, 0.08);
+    }
+
+    /* Buttons */
+    .stButton > button {
+        border-radius: 14px;
+        border: 1px solid rgba(0, 255, 170, 0.55);
+        background: linear-gradient(135deg, #00b894, #0984e3);
+        color: white;
+        font-weight: 800;
+        padding: 0.75rem 1rem;
+        box-shadow: 0 0 22px rgba(0, 255, 170, 0.18);
+    }
+
+    .stDownloadButton > button {
+        border-radius: 14px;
+        border: 1px solid rgba(0, 255, 170, 0.55);
+        background: linear-gradient(135deg, #10b981, #0ea5e9);
+        color: white;
+        font-weight: 800;
+        padding: 0.75rem 1rem;
+        box-shadow: 0 0 22px rgba(14, 165, 233, 0.18);
+    }
+
+    /* File uploader */
+    [data-testid="stFileUploader"] {
+        background: rgba(15, 23, 42, 0.82);
+        border: 1px dashed rgba(0, 255, 170, 0.55);
+        border-radius: 20px;
+        padding: 20px;
+        box-shadow: inset 0 0 18px rgba(0, 255, 170, 0.06);
+    }
+
+    /* Data editor */
+    [data-testid="stDataFrame"] {
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+
+    /* Info/success boxes */
+    [data-testid="stAlert"] {
+        border-radius: 15px;
+    }
+
+    h1, h2, h3 {
+        color: #eaffff;
+    }
+
+    label, .stMarkdown, p, span {
+        color: #d9f8ff;
+    }
+
+    .small-note {
+        color: #9ddfd3;
+        font-size: 13px;
+        margin-top: -4px;
+    }
+
+    .picture-panel {
+        border: 1px solid rgba(0, 255, 170, 0.35);
+        background: rgba(15, 23, 42, 0.78);
+        border-radius: 22px;
+        padding: 22px;
+        margin-top: 10px;
+        box-shadow: 0 0 26px rgba(0, 255, 170, 0.09);
+    }
+    </style>
+    """,
+    unsafe_allow_html=True
+)
 
 
 # =========================================================
@@ -29,19 +202,10 @@ TEMPLATE_FILE = "WBMF PO 1011953241 HAJU.xlsx"
 # =========================================================
 
 def write_cell(ws, cell_address, value):
-    """
-    Tulis value ke cell biasa.
-    Dipakai untuk Sheet1.
-    """
     ws[cell_address] = value if value not in [None, ""] else "-"
 
 
 def set_cell_safe(ws, cell_address, value):
-    """
-    Tulis value ke cell tanpa merusak merged cell.
-    Jika cell target adalah merged cell non-utama,
-    maka value akan ditulis ke cell utama/top-left dari merged range.
-    """
     cell = ws[cell_address]
 
     if not isinstance(cell, MergedCell):
@@ -59,10 +223,6 @@ def set_cell_safe(ws, cell_address, value):
 
 
 def clear_cell_safe(ws, cell_address):
-    """
-    Clear cell tanpa merusak merged cell.
-    Jika cell adalah merged cell non-utama, dilewati.
-    """
     cell = ws[cell_address]
 
     if isinstance(cell, MergedCell):
@@ -72,9 +232,6 @@ def clear_cell_safe(ws, cell_address):
 
 
 def clear_range_safe(ws, min_row, max_row, columns):
-    """
-    Clear area input tanpa unmerge dan tanpa mengubah layout.
-    """
     for row in range(min_row, max_row + 1):
         for col in columns:
             clear_cell_safe(ws, f"{col}{row}")
@@ -82,18 +239,13 @@ def clear_range_safe(ws, min_row, max_row, columns):
 
 def clear_picture_sheet(ws_picture, keep_title=True):
     """
-    Bersihkan sheet PICTURE dari tulisan/data yang tidak perlu.
-    Judul PICTURE & ATTACHMENT di row 1 tetap dipertahankan jika keep_title=True.
-    Gambar lama/contoh juga dihapus.
+    Bersihkan sheet PICTURE dari tulisan/data/gambar lama.
+    Judul tetap dipertahankan.
     """
-
-    # Hapus semua gambar lama/contoh
     ws_picture._images = []
 
-    # Simpan title jika ada
     title_value = ws_picture["A1"].value if keep_title else None
 
-    # Bersihkan semua isi cell, kecuali row 1 jika keep_title=True
     for row in ws_picture.iter_rows():
         for cell in row:
             if keep_title and cell.row == 1:
@@ -104,15 +256,11 @@ def clear_picture_sheet(ws_picture, keep_title=True):
 
             cell.value = None
 
-    # Pastikan title tetap ada
     if keep_title:
         ws_picture["A1"] = title_value if title_value else "PICTURE & ATTACHMENT"
 
 
 def find_row_by_text(ws, text):
-    """
-    Cari nomor row berdasarkan text tertentu.
-    """
     for row in ws.iter_rows():
         for cell in row:
             if cell.value == text:
@@ -121,9 +269,6 @@ def find_row_by_text(ws, text):
 
 
 def prepare_valid_items(items_df):
-    """
-    Ambil data material yang valid dari dataframe Streamlit.
-    """
     valid_items = []
 
     for _, row in items_df.iterrows():
@@ -176,8 +321,8 @@ def prepare_valid_items(items_df):
 
 def save_uploaded_image_to_temp(uploaded_file):
     """
-    Simpan gambar upload ke temporary file tanpa mengubah resolusi asli.
-    Yang disesuaikan hanya ukuran tampilan gambar di Excel.
+    Simpan gambar upload tanpa mengubah resolusi asli.
+    Yang diubah hanya ukuran tampilan object di Excel.
     """
     uploaded_file.seek(0)
 
@@ -193,9 +338,9 @@ def save_uploaded_image_to_temp(uploaded_file):
     return temp_file.name
 
 
-def get_fitted_image_size(image_path, max_width=360, max_height=260):
+def get_fitted_image_size(image_path, max_width=430, max_height=330):
     """
-    Hitung ukuran tampilan gambar agar pas di area Excel.
+    Fit ukuran tampilan gambar di Excel.
     Resolusi file asli tidak diubah.
     """
     with Image.open(image_path) as img:
@@ -216,9 +361,6 @@ def get_fitted_image_size(image_path, max_width=360, max_height=260):
 
 
 def safe_filename(text):
-    """
-    Bersihkan nama file dari karakter yang tidak aman untuk Windows.
-    """
     text = str(text)
     invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
 
@@ -229,20 +371,14 @@ def safe_filename(text):
 
 
 # =========================================================
-# GENERATE EXCEL SESUAI TEMPLATE ASLI
+# GENERATE EXCEL
 # =========================================================
 
-def generate_excel(
-    form_data,
-    items_df,
-    uploaded_images,
-    clear_picture_content=True
-):
+def generate_excel(form_data, items_df, uploaded_images):
     """
-    Generate Excel dengan mempertahankan format template asli.
-    Tidak unmerge.
-    Tidak mengubah layout Manifest dan Waybill.
-    Sheet PICTURE dibersihkan dari tulisan tidak perlu.
+    Generate Excel sesuai template asli.
+    PICTURE selalu otomatis dibersihkan.
+    PDF tidak digunakan.
     """
 
     wb = load_workbook(TEMPLATE_FILE)
@@ -279,13 +415,6 @@ def generate_excel(
     # =====================================================
     # UPDATE MANIFEST
     # =====================================================
-    # Manifest:
-    # A = No.
-    # B = Waybill No.
-    # C = Description
-    # I = Quantity
-    # K = Destination
-    # P = UOM
 
     manifest_start_row = 17
     total_qty_row = find_row_by_text(ws_manifest, "Total Quantity")
@@ -313,8 +442,6 @@ def generate_excel(
         set_cell_safe(ws_manifest, f"P{manifest_row}", item["uom"])
 
         total_quantity += item["quantity"]
-
-        # Template Manifest menggunakan jarak 2 row antar item.
         manifest_row += 2
 
     if total_qty_row:
@@ -323,13 +450,6 @@ def generate_excel(
     # =====================================================
     # UPDATE WAYBILL
     # =====================================================
-    # Waybill:
-    # A = No. Item
-    # C = Item Name / Description
-    # H = Job Site
-    # K = Destination
-    # M = Quantity Delivered
-    # O = Quantity Received
 
     waybill_start_row = 8
     prepared_row = find_row_by_text(ws_waybill, "Prepared By")
@@ -358,24 +478,21 @@ def generate_excel(
         waybill_row += 1
 
     # =====================================================
-    # UPDATE PICTURE
+    # UPDATE PICTURE - AUTO CLEAN, NO CHECKBOX
     # =====================================================
 
-    if clear_picture_content:
-        # Hapus tulisan tidak perlu dan gambar contoh/lama.
-        # Judul PICTURE & ATTACHMENT tetap dipertahankan.
-        clear_picture_sheet(ws_picture, keep_title=True)
+    clear_picture_sheet(ws_picture, keep_title=True)
 
     if uploaded_images:
         picture_slots = [
-            {"cell": "B3", "max_width": 360, "max_height": 260},
-            {"cell": "K3", "max_width": 360, "max_height": 260},
-            {"cell": "B28", "max_width": 360, "max_height": 260},
-            {"cell": "K28", "max_width": 360, "max_height": 260},
-            {"cell": "B53", "max_width": 360, "max_height": 260},
-            {"cell": "K53", "max_width": 360, "max_height": 260},
-            {"cell": "B78", "max_width": 360, "max_height": 260},
-            {"cell": "K78", "max_width": 360, "max_height": 260},
+            {"cell": "B3", "max_width": 430, "max_height": 330},
+            {"cell": "K3", "max_width": 430, "max_height": 330},
+            {"cell": "B31", "max_width": 430, "max_height": 330},
+            {"cell": "K31", "max_width": 430, "max_height": 330},
+            {"cell": "B59", "max_width": 430, "max_height": 330},
+            {"cell": "K59", "max_width": 430, "max_height": 330},
+            {"cell": "B87", "max_width": 430, "max_height": 330},
+            {"cell": "K87", "max_width": 430, "max_height": 330},
         ]
 
         for uploaded_file, slot in zip(uploaded_images, picture_slots):
@@ -389,14 +506,11 @@ def generate_excel(
                 max_height=slot["max_height"]
             )
 
-            # Ini hanya mengubah ukuran tampilan di Excel,
-            # bukan mengubah resolusi asli file gambar.
             img.width = display_width
             img.height = display_height
 
             ws_picture.add_image(img, slot["cell"])
 
-    # Paksa Excel recalculate formula saat file dibuka.
     wb.calculation.fullCalcOnLoad = True
     wb.calculation.forceFullCalc = True
 
@@ -411,11 +525,20 @@ def generate_excel(
 # STREAMLIT UI
 # =========================================================
 
-st.title("📦 WBMF-40AI Manifest & Waybill Generator")
-
-st.write(
-    "Input data dari Streamlit, lalu generate Excel sesuai template asli. "
-    "Fitur PDF sudah dihapus."
+st.markdown(
+    """
+    <div class="robot-header">
+        <p class="robot-title">🤖 WBMF-40AI Logistics Robot</p>
+        <div class="robot-subtitle">
+            Automated Manifest, Waybill & Picture Attachment Generator for Warehouse Mining Logistics
+        </div>
+        <span class="robot-badge">📦 Warehouse Automation</span>
+        <span class="robot-badge">🚚 Logistics Flow</span>
+        <span class="robot-badge">🧠 Smart Input</span>
+        <span class="robot-badge">🖼️ Auto Picture Clean</span>
+    </div>
+    """,
+    unsafe_allow_html=True
 )
 
 if not os.path.exists(TEMPLATE_FILE):
@@ -423,30 +546,10 @@ if not os.path.exists(TEMPLATE_FILE):
     st.info("Pastikan file template Excel ada satu folder dengan app.py.")
     st.stop()
 
-
-with st.sidebar:
-    st.header("📁 Setup")
-    st.success("Template Excel ditemukan.")
-    st.caption(TEMPLATE_FILE)
-
-    st.divider()
-
-    st.header("⚙️ Opsi Picture")
-    clear_picture_content = st.checkbox(
-        "Bersihkan tulisan/gambar lama di sheet PICTURE",
-        value=True
-    )
-
-    st.caption(
-        "Jika dicentang, tulisan tidak perlu dan gambar contoh di sheet PICTURE akan dihapus. "
-        "Judul PICTURE & ATTACHMENT tetap dipertahankan."
-    )
-
-
 tab1, tab2, tab3 = st.tabs([
-    "1️⃣ Header",
-    "2️⃣ Material & Quantity",
-    "3️⃣ Picture Optional"
+    "🤖 Header Command",
+    "📦 Material Payload",
+    "🖼️ Picture Bay"
 ])
 
 
@@ -455,7 +558,8 @@ tab1, tab2, tab3 = st.tabs([
 # =========================================================
 
 with tab1:
-    st.subheader("Input Header Sesuai Sheet1")
+    st.subheader("🤖 Header Command Center")
+    st.caption("Input utama akan masuk ke Sheet1 dan otomatis mengisi header Manifest/Waybill.")
 
     col1, col2 = st.columns(2)
 
@@ -553,12 +657,8 @@ with tab1:
 # =========================================================
 
 with tab2:
-    st.subheader("Input Material Description dan Quantity")
-
-    st.info(
-        "Material Description dan Quantity akan masuk ke Manifest dan Waybill "
-        "tanpa mengubah layout template Excel."
-    )
+    st.subheader("📦 Material Payload Input")
+    st.caption("Material Description dan Quantity akan masuk ke Manifest dan Waybill tanpa mengubah layout template Excel.")
 
     default_data = pd.DataFrame([
         {
@@ -609,7 +709,7 @@ with tab2:
     preview_items = prepare_valid_items(edited_items_df)
     total_preview_qty = sum(item["quantity"] for item in preview_items)
 
-    col_a, col_b = st.columns(2)
+    col_a, col_b, col_c = st.columns(3)
 
     with col_a:
         st.metric("Total Item", len(preview_items))
@@ -617,34 +717,43 @@ with tab2:
     with col_b:
         st.metric("Total Quantity", total_preview_qty)
 
+    with col_c:
+        st.metric("System Mode", "AUTO")
+
 
 # =========================================================
 # TAB 3 - PICTURE
 # =========================================================
 
 with tab3:
-    st.subheader("Upload Picture / Attachment Optional")
+    st.subheader("🖼️ Picture Bay - Logistics Evidence Upload")
+    st.caption("Sheet PICTURE akan otomatis dibersihkan. Tidak perlu checkbox. Upload gambar akan masuk ke slot attachment.")
+
+    st.markdown('<div class="picture-panel">', unsafe_allow_html=True)
 
     uploaded_images = st.file_uploader(
-        "Upload gambar jika ada",
+        "Drop / Browse picture attachment",
         type=["png", "jpg", "jpeg"],
-        accept_multiple_files=True
+        accept_multiple_files=True,
+        help="Upload foto material, packaging, evidence delivery, atau attachment lain."
     )
 
     if uploaded_images:
-        st.success(f"{len(uploaded_images)} gambar dipilih.")
+        st.success(f"{len(uploaded_images)} gambar siap diproses oleh Logistics Robot.")
 
-        preview_cols = st.columns(3)
+        preview_cols = st.columns(4)
 
         for idx, uploaded_image in enumerate(uploaded_images):
-            with preview_cols[idx % 3]:
+            with preview_cols[idx % 4]:
                 st.image(
                     uploaded_image,
                     caption=uploaded_image.name,
-                    width=250
+                    use_container_width=True
                 )
     else:
-        st.info("Picture tidak wajib. Jika tidak ada, langsung generate saja.")
+        st.info("Picture optional. Jika tidak ada gambar, sheet PICTURE tetap dibersihkan dari data/gambar lama.")
+
+    st.markdown('</div>', unsafe_allow_html=True)
 
 
 # =========================================================
@@ -674,7 +783,7 @@ form_data = {
 }
 
 generate = st.button(
-    "🚀 Generate Excel",
+    "🤖 Generate Excel - Deploy Logistics Document",
     type="primary",
     use_container_width=True
 )
@@ -689,8 +798,7 @@ if generate:
             excel_file, item_count, total_quantity = generate_excel(
                 form_data=form_data,
                 items_df=edited_items_df,
-                uploaded_images=uploaded_images,
-                clear_picture_content=clear_picture_content
+                uploaded_images=uploaded_images
             )
 
             safe_po_sto = safe_filename(po_sto)
@@ -699,12 +807,12 @@ if generate:
             excel_filename = f"WBMF_{safe_po_sto}_{safe_wb_number}.xlsx"
 
             st.success(
-                f"Excel berhasil dibuat. Total item: {item_count}, "
-                f"Total quantity: {total_quantity}"
+                f"Mission complete. Excel berhasil dibuat. "
+                f"Total item: {item_count}, Total quantity: {total_quantity}"
             )
 
             st.download_button(
-                label="⬇️ Download Excel",
+                label="⬇️ Download Excel Output",
                 data=excel_file,
                 file_name=excel_filename,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
