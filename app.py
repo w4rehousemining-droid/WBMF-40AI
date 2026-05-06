@@ -26,13 +26,12 @@ TEMPLATE_FILE = "WBMF PO 1011953241 HAJU.xlsx"
 
 
 # =========================================================
-# CUSTOM THEME CSS - ROBOTIC LOGISTICS
+# ROBOTIC LOGISTICS THEME
 # =========================================================
 
 st.markdown(
     """
     <style>
-    /* Hide sidebar completely */
     [data-testid="stSidebar"] {
         display: none;
     }
@@ -41,29 +40,26 @@ st.markdown(
         display: none;
     }
 
-    /* Main background */
     .stApp {
         background:
-            radial-gradient(circle at top left, rgba(0, 255, 170, 0.12), transparent 28%),
-            radial-gradient(circle at top right, rgba(0, 162, 255, 0.13), transparent 30%),
+            radial-gradient(circle at top left, rgba(0,255,170,0.13), transparent 28%),
+            radial-gradient(circle at top right, rgba(0,162,255,0.13), transparent 30%),
             linear-gradient(135deg, #071018 0%, #0b1220 48%, #111827 100%);
         color: #e5f7ff;
     }
 
-    /* Main block */
     .block-container {
-        padding-top: 1.6rem;
+        padding-top: 1.4rem;
         padding-bottom: 2rem;
-        max-width: 1400px;
+        max-width: 1450px;
     }
 
-    /* Header card */
     .robot-header {
         border: 1px solid rgba(0, 255, 170, 0.35);
-        background: linear-gradient(135deg, rgba(13, 27, 42, 0.92), rgba(17, 24, 39, 0.92));
+        background: linear-gradient(135deg, rgba(13,27,42,0.94), rgba(17,24,39,0.94));
         border-radius: 22px;
         padding: 24px 28px;
-        box-shadow: 0 0 28px rgba(0, 255, 170, 0.12);
+        box-shadow: 0 0 28px rgba(0,255,170,0.12);
         margin-bottom: 20px;
     }
 
@@ -85,86 +81,73 @@ st.markdown(
         display: inline-block;
         padding: 7px 12px;
         border-radius: 999px;
-        background: rgba(0, 255, 170, 0.10);
-        border: 1px solid rgba(0, 255, 170, 0.35);
+        background: rgba(0,255,170,0.10);
+        border: 1px solid rgba(0,255,170,0.35);
         color: #7cffd2;
         font-size: 13px;
         margin-right: 8px;
         margin-top: 14px;
     }
 
-    /* Tabs */
     .stTabs [data-baseweb="tab-list"] {
         gap: 10px;
     }
 
     .stTabs [data-baseweb="tab"] {
-        background: rgba(15, 23, 42, 0.88);
-        border: 1px solid rgba(56, 189, 248, 0.25);
+        background: rgba(15,23,42,0.88);
+        border: 1px solid rgba(56,189,248,0.25);
         border-radius: 14px;
         color: #c7f9ff;
         padding: 12px 18px;
     }
 
     .stTabs [aria-selected="true"] {
-        background: linear-gradient(135deg, rgba(0, 255, 170, 0.20), rgba(56, 189, 248, 0.20)) !important;
-        border: 1px solid rgba(0, 255, 170, 0.75) !important;
+        background: linear-gradient(135deg, rgba(0,255,170,0.20), rgba(56,189,248,0.20)) !important;
+        border: 1px solid rgba(0,255,170,0.75) !important;
         color: #ffffff !important;
-        box-shadow: 0 0 18px rgba(0, 255, 170, 0.15);
+        box-shadow: 0 0 18px rgba(0,255,170,0.15);
     }
 
-    /* Input panels */
-    [data-testid="stVerticalBlockBorderWrapper"] {
-        border-color: rgba(56, 189, 248, 0.20) !important;
-    }
-
-    /* Metric cards */
     [data-testid="stMetric"] {
-        background: rgba(15, 23, 42, 0.88);
-        border: 1px solid rgba(0, 255, 170, 0.25);
+        background: rgba(15,23,42,0.88);
+        border: 1px solid rgba(0,255,170,0.25);
         border-radius: 16px;
         padding: 16px;
-        box-shadow: 0 0 20px rgba(0, 255, 170, 0.08);
+        box-shadow: 0 0 20px rgba(0,255,170,0.08);
     }
 
-    /* Buttons */
     .stButton > button {
         border-radius: 14px;
-        border: 1px solid rgba(0, 255, 170, 0.55);
+        border: 1px solid rgba(0,255,170,0.55);
         background: linear-gradient(135deg, #00b894, #0984e3);
         color: white;
         font-weight: 800;
         padding: 0.75rem 1rem;
-        box-shadow: 0 0 22px rgba(0, 255, 170, 0.18);
+        box-shadow: 0 0 22px rgba(0,255,170,0.18);
     }
 
     .stDownloadButton > button {
         border-radius: 14px;
-        border: 1px solid rgba(0, 255, 170, 0.55);
+        border: 1px solid rgba(0,255,170,0.55);
         background: linear-gradient(135deg, #10b981, #0ea5e9);
         color: white;
         font-weight: 800;
         padding: 0.75rem 1rem;
-        box-shadow: 0 0 22px rgba(14, 165, 233, 0.18);
+        box-shadow: 0 0 22px rgba(14,165,233,0.18);
     }
 
-    /* File uploader */
     [data-testid="stFileUploader"] {
-        background: rgba(15, 23, 42, 0.82);
-        border: 1px dashed rgba(0, 255, 170, 0.55);
+        background: rgba(15,23,42,0.82);
+        border: 1px dashed rgba(0,255,170,0.55);
         border-radius: 20px;
         padding: 20px;
-        box-shadow: inset 0 0 18px rgba(0, 255, 170, 0.06);
+        box-shadow: inset 0 0 18px rgba(0,255,170,0.06);
     }
 
-    /* Data editor */
-    [data-testid="stDataFrame"] {
-        border-radius: 16px;
-        overflow: hidden;
-        border: 1px solid rgba(56, 189, 248, 0.25);
+    textarea {
+        font-family: Consolas, monospace !important;
     }
 
-    /* Info/success boxes */
     [data-testid="stAlert"] {
         border-radius: 15px;
     }
@@ -177,19 +160,13 @@ st.markdown(
         color: #d9f8ff;
     }
 
-    .small-note {
-        color: #9ddfd3;
-        font-size: 13px;
-        margin-top: -4px;
-    }
-
     .picture-panel {
-        border: 1px solid rgba(0, 255, 170, 0.35);
-        background: rgba(15, 23, 42, 0.78);
+        border: 1px solid rgba(0,255,170,0.35);
+        background: rgba(15,23,42,0.78);
         border-radius: 22px;
         padding: 22px;
         margin-top: 10px;
-        box-shadow: 0 0 26px rgba(0, 255, 170, 0.09);
+        box-shadow: 0 0 26px rgba(0,255,170,0.09);
     }
     </style>
     """,
@@ -206,6 +183,9 @@ def write_cell(ws, cell_address, value):
 
 
 def set_cell_safe(ws, cell_address, value):
+    """
+    Tulis value ke cell tanpa merusak merged cell.
+    """
     cell = ws[cell_address]
 
     if not isinstance(cell, MergedCell):
@@ -239,7 +219,7 @@ def clear_range_safe(ws, min_row, max_row, columns):
 
 def clear_picture_sheet(ws_picture, keep_title=True):
     """
-    Bersihkan sheet PICTURE dari tulisan/data/gambar lama.
+    Bersihkan sheet PICTURE dari tulisan/gambar lama.
     Judul tetap dipertahankan.
     """
     ws_picture._images = []
@@ -268,61 +248,43 @@ def find_row_by_text(ws, text):
     return None
 
 
-def prepare_valid_items(items_df):
-    valid_items = []
+def safe_filename(text):
+    text = str(text)
+    invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
 
-    for _, row in items_df.iterrows():
-        material_desc = str(row.get("Material Description", "")).strip()
+    for char in invalid_chars:
+        text = text.replace(char, "-")
 
-        if material_desc == "" or material_desc.lower() == "nan":
-            continue
+    return text
 
-        quantity = row.get("Quantity", 0)
-        quantity_received = row.get("Quantity Received", quantity)
 
-        try:
-            quantity = float(quantity)
-            if quantity.is_integer():
-                quantity = int(quantity)
-        except Exception:
-            quantity = 0
+def normalize_qty(value, default=1):
+    try:
+        if value is None:
+            return default
 
-        try:
-            quantity_received = float(quantity_received)
-            if quantity_received.is_integer():
-                quantity_received = int(quantity_received)
-        except Exception:
-            quantity_received = quantity
+        value = str(value).strip()
 
-        job_site = str(row.get("Job Site", "")).strip()
-        destination = str(row.get("Destination", "")).strip()
-        uom = str(row.get("UOM", "EA")).strip()
+        if value == "":
+            return default
 
-        if job_site == "" or job_site.lower() == "nan":
-            job_site = "-"
+        value = value.replace(",", ".")
 
-        if destination == "" or destination.lower() == "nan":
-            destination = "-"
+        number = float(value)
 
-        if uom == "" or uom.lower() == "nan":
-            uom = "EA"
+        if number.is_integer():
+            number = int(number)
 
-        valid_items.append({
-            "material_desc": material_desc,
-            "quantity": quantity,
-            "quantity_received": quantity_received,
-            "job_site": job_site,
-            "destination": destination,
-            "uom": uom
-        })
+        return number
 
-    return valid_items
+    except Exception:
+        return default
 
 
 def save_uploaded_image_to_temp(uploaded_file):
     """
     Simpan gambar upload tanpa mengubah resolusi asli.
-    Yang diubah hanya ukuran tampilan object di Excel.
+    Yang diubah hanya ukuran tampilan object gambar di Excel.
     """
     uploaded_file.seek(0)
 
@@ -339,10 +301,6 @@ def save_uploaded_image_to_temp(uploaded_file):
 
 
 def get_fitted_image_size(image_path, max_width=430, max_height=330):
-    """
-    Fit ukuran tampilan gambar di Excel.
-    Resolusi file asli tidak diubah.
-    """
     with Image.open(image_path) as img:
         original_width, original_height = img.size
 
@@ -360,27 +318,162 @@ def get_fitted_image_size(image_path, max_width=430, max_height=330):
     return display_width, display_height
 
 
-def safe_filename(text):
-    text = str(text)
-    invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
+def parse_material_direct_input(bulk_text):
+    """
+    Parse paste langsung dari Excel.
 
-    for char in invalid_chars:
-        text = text.replace(char, "-")
+    Aturan:
+    - Kolom pertama = Material Description.
+    - Kolom kedua = Quantity jika ada dan angka.
+    - Kolom ketiga dan seterusnya diabaikan.
+    - Jika Quantity kosong/tidak valid, default = 1.
+    """
 
-    return text
+    valid_items = []
+
+    for line in bulk_text.splitlines():
+        raw_line = line.strip()
+
+        if raw_line == "":
+            continue
+
+        columns = [col.strip() for col in raw_line.split("\t")]
+
+        if len(columns) == 1 and "," in raw_line:
+            columns = [col.strip() for col in raw_line.split(",")]
+
+        material_desc = columns[0].strip() if len(columns) >= 1 else ""
+
+        if material_desc == "":
+            continue
+
+        quantity = 1
+
+        if len(columns) >= 2:
+            quantity = normalize_qty(columns[1], default=1)
+
+        valid_items.append({
+            "material_desc": material_desc,
+            "quantity": quantity,
+            "quantity_received": quantity,
+            "job_site": "MACO MINING",
+            "destination": "MACO HAULING",
+            "uom": "EA"
+        })
+
+    return valid_items
+
+
+def build_preview_dataframe(valid_items):
+    rows = []
+
+    for idx, item in enumerate(valid_items, start=1):
+        rows.append({
+            "No": idx,
+            "Material Description": item["material_desc"],
+            "Quantity": item["quantity"],
+            "Quantity Received": item["quantity_received"],
+            "Job Site": item["job_site"],
+            "Destination": item["destination"],
+            "UOM": item["uom"]
+        })
+
+    return pd.DataFrame(rows)
+
+
+def write_header_direct_to_manifest_waybill(ws_manifest, ws_waybill, form_data):
+    """
+    Menulis header langsung ke Manifest dan Waybill agar Sheet1 bisa dihapus.
+    Mapping ini menggantikan formula seperti =Sheet1!B1, =Sheet1!B2, dst.
+    """
+
+    # Manifest header
+    set_cell_safe(ws_manifest, "E3", form_data["mf_number"])
+    set_cell_safe(ws_manifest, "E4", form_data["po_sto"])
+    set_cell_safe(ws_manifest, "E5", form_data["insurance_po_number"])
+    set_cell_safe(ws_manifest, "E6", form_data["forwarder"])
+    set_cell_safe(ws_manifest, "E7", form_data["delivery_mode"])
+    set_cell_safe(ws_manifest, "E8", form_data["transportation_type"])
+    set_cell_safe(ws_manifest, "E9", form_data["transportation_name"])
+    set_cell_safe(ws_manifest, "E10", form_data["transportation_capacity"])
+    set_cell_safe(ws_manifest, "E11", form_data["etd"])
+    set_cell_safe(ws_manifest, "E12", form_data["eta"])
+    set_cell_safe(ws_manifest, "E13", form_data["actual_arrival_date"])
+
+    set_cell_safe(ws_manifest, "L3", form_data["from_location"])
+    set_cell_safe(ws_manifest, "L8", form_data["to_location"])
+    set_cell_safe(ws_manifest, "L11", form_data["attention"])
+    set_cell_safe(ws_manifest, "L12", form_data["phone"])
+    set_cell_safe(ws_manifest, "L13", form_data["company"])
+
+    # Waybill header
+    set_cell_safe(ws_waybill, "D3", form_data["wb_number"])
+
+
+def replace_sheet1_formulas_with_values(wb, form_data):
+    """
+    Mengganti formula yang masih mengarah ke Sheet1 menjadi value langsung.
+    Ini penting sebelum Sheet1 dihapus.
+    """
+
+    formula_value_map = {
+        "=Sheet1!B1": form_data["mf_number"],
+        "=Sheet1!B2": form_data["wb_number"],
+        "=Sheet1!B3": form_data["po_sto"],
+        "=Sheet1!B4": form_data["forwarder"],
+        "=Sheet1!B5": form_data["delivery_mode"],
+        "=Sheet1!B6": form_data["insurance_po_number"],
+        "=Sheet1!B7": form_data["transportation_type"],
+        "=Sheet1!B8": form_data["transportation_name"],
+        "=Sheet1!B9": form_data["transportation_capacity"],
+        "=Sheet1!B10": form_data["etd"],
+        "=Sheet1!B11": form_data["eta"],
+        "=Sheet1!B12": form_data["actual_arrival_date"],
+        "=Sheet1!B13": form_data["from_location"],
+        "=Sheet1!B14": form_data["to_location"],
+        "=Sheet1!B15": form_data["attention"],
+        "=Sheet1!B16": form_data["phone"],
+        "=Sheet1!B17": form_data["company"],
+    }
+
+    for ws in wb.worksheets:
+        if ws.title == "Sheet1":
+            continue
+
+        for row in ws.iter_rows():
+            for cell in row:
+                if isinstance(cell, MergedCell):
+                    continue
+
+                if isinstance(cell.value, str) and cell.value.startswith("="):
+                    formula_normalized = (
+                        cell.value
+                        .replace("$", "")
+                        .replace("'", "")
+                        .strip()
+                    )
+
+                    if formula_normalized in formula_value_map:
+                        cell.value = formula_value_map[formula_normalized]
+
+
+def delete_sheet1_from_output(wb):
+    """
+    Hapus Sheet1 dari workbook output.
+    """
+    if "Sheet1" in wb.sheetnames:
+        ws_sheet1 = wb["Sheet1"]
+        wb.remove(ws_sheet1)
+
+    if "Manifest" in wb.sheetnames:
+        wb.active = wb.sheetnames.index("Manifest")
 
 
 # =========================================================
 # GENERATE EXCEL
 # =========================================================
 
-def generate_excel(form_data, items_df, uploaded_images):
-    """
-    Generate Excel sesuai template asli.
-    PICTURE selalu otomatis dibersihkan.
-    PDF tidak digunakan.
-    """
-
+def generate_excel(form_data, valid_items, uploaded_images):
     wb = load_workbook(TEMPLATE_FILE)
 
     ws_input = wb["Sheet1"]
@@ -389,8 +482,10 @@ def generate_excel(form_data, items_df, uploaded_images):
     ws_picture = wb["PICTURE"]
 
     # =====================================================
-    # UPDATE SHEET1
+    # UPDATE SHEET1 TEMPORARY
     # =====================================================
+    # Sheet1 hanya dipakai sementara untuk menjaga kompatibilitas template.
+    # Setelah header dipindah ke Manifest/Waybill, Sheet1 dihapus dari output.
 
     write_cell(ws_input, "B1", form_data["mf_number"])
     write_cell(ws_input, "B2", form_data["wb_number"])
@@ -410,7 +505,15 @@ def generate_excel(form_data, items_df, uploaded_images):
     write_cell(ws_input, "B16", form_data["phone"])
     write_cell(ws_input, "B17", form_data["company"])
 
-    valid_items = prepare_valid_items(items_df)
+    # =====================================================
+    # HEADER LANGSUNG KE MANIFEST / WAYBILL
+    # =====================================================
+
+    write_header_direct_to_manifest_waybill(
+        ws_manifest=ws_manifest,
+        ws_waybill=ws_waybill,
+        form_data=form_data
+    )
 
     # =====================================================
     # UPDATE MANIFEST
@@ -429,6 +532,7 @@ def generate_excel(form_data, items_df, uploaded_images):
 
     manifest_row = manifest_start_row
     total_quantity = 0
+    manifest_inserted = 0
 
     for idx, item in enumerate(valid_items, start=1):
         if manifest_row > manifest_end_row:
@@ -442,6 +546,9 @@ def generate_excel(form_data, items_df, uploaded_images):
         set_cell_safe(ws_manifest, f"P{manifest_row}", item["uom"])
 
         total_quantity += item["quantity"]
+        manifest_inserted += 1
+
+        # Template Manifest memakai jarak 2 row antar item.
         manifest_row += 2
 
     if total_qty_row:
@@ -463,6 +570,7 @@ def generate_excel(form_data, items_df, uploaded_images):
     )
 
     waybill_row = waybill_start_row
+    waybill_inserted = 0
 
     for idx, item in enumerate(valid_items, start=1):
         if waybill_row > waybill_end_row:
@@ -475,10 +583,11 @@ def generate_excel(form_data, items_df, uploaded_images):
         set_cell_safe(ws_waybill, f"M{waybill_row}", item["quantity"])
         set_cell_safe(ws_waybill, f"O{waybill_row}", item["quantity_received"])
 
+        waybill_inserted += 1
         waybill_row += 1
 
     # =====================================================
-    # UPDATE PICTURE - AUTO CLEAN, NO CHECKBOX
+    # UPDATE PICTURE
     # =====================================================
 
     clear_picture_sheet(ws_picture, keep_title=True)
@@ -511,6 +620,16 @@ def generate_excel(form_data, items_df, uploaded_images):
 
             ws_picture.add_image(img, slot["cell"])
 
+    # =====================================================
+    # HAPUS SHEET1 DARI OUTPUT
+    # =====================================================
+    # Sebelum Sheet1 dihapus, semua formula yang masih refer ke Sheet1 diganti value.
+
+    replace_sheet1_formulas_with_values(wb, form_data)
+    delete_sheet1_from_output(wb)
+
+    # Recalculate tidak terlalu dibutuhkan lagi karena formula Sheet1 sudah diganti value,
+    # tapi tetap aman untuk formula lain di workbook.
     wb.calculation.fullCalcOnLoad = True
     wb.calculation.forceFullCalc = True
 
@@ -518,7 +637,13 @@ def generate_excel(form_data, items_df, uploaded_images):
     wb.save(output)
     output.seek(0)
 
-    return output, len(valid_items), total_quantity
+    return {
+        "file": output,
+        "total_items_input": len(valid_items),
+        "total_quantity": total_quantity,
+        "manifest_inserted": manifest_inserted,
+        "waybill_inserted": waybill_inserted
+    }
 
 
 # =========================================================
@@ -530,11 +655,11 @@ st.markdown(
     <div class="robot-header">
         <p class="robot-title">🤖 WBMF-40AI Logistics Robot</p>
         <div class="robot-subtitle">
-            Automated Manifest, Waybill & Picture Attachment Generator for Warehouse Mining Logistics
+            Direct Excel Paste to Manifest, Waybill & Picture Attachment Generator
         </div>
-        <span class="robot-badge">📦 Warehouse Automation</span>
-        <span class="robot-badge">🚚 Logistics Flow</span>
-        <span class="robot-badge">🧠 Smart Input</span>
+        <span class="robot-badge">📦 Direct Manifest Input</span>
+        <span class="robot-badge">🚚 Direct Waybill Input</span>
+        <span class="robot-badge">🧠 Sheet1 Removed on Output</span>
         <span class="robot-badge">🖼️ Auto Picture Clean</span>
     </div>
     """,
@@ -546,9 +671,10 @@ if not os.path.exists(TEMPLATE_FILE):
     st.info("Pastikan file template Excel ada satu folder dengan app.py.")
     st.stop()
 
+
 tab1, tab2, tab3 = st.tabs([
-    "🤖 Header Command",
-    "📦 Material Payload",
+    "🤖 Header Manifest / Waybill",
+    "📦 Direct Material Paste",
     "🖼️ Picture Bay"
 ])
 
@@ -558,8 +684,8 @@ tab1, tab2, tab3 = st.tabs([
 # =========================================================
 
 with tab1:
-    st.subheader("🤖 Header Command Center")
-    st.caption("Input utama akan masuk ke Sheet1 dan otomatis mengisi header Manifest/Waybill.")
+    st.subheader("🤖 Header Manifest / Waybill")
+    st.caption("Input ini langsung ditulis ke Manifest dan Waybill. Sheet1 akan dihapus dari file download.")
 
     col1, col2 = st.columns(2)
 
@@ -653,72 +779,57 @@ with tab1:
 
 
 # =========================================================
-# TAB 2 - MATERIAL
+# TAB 2 - DIRECT MATERIAL PASTE
 # =========================================================
 
 with tab2:
-    st.subheader("📦 Material Payload Input")
-    st.caption("Material Description dan Quantity akan masuk ke Manifest dan Waybill tanpa mengubah layout template Excel.")
-
-    default_data = pd.DataFrame([
-        {
-            "Material Description": "02091-12030",
-            "Quantity": 5,
-            "Quantity Received": 5,
-            "Job Site": "MACO MINING",
-            "Destination": "MACO HAULING",
-            "UOM": "EA"
-        },
-        {
-            "Material Description": "02290-12031",
-            "Quantity": 1,
-            "Quantity Received": 1,
-            "Job Site": "MACO MINING",
-            "Destination": "MACO HAULING",
-            "UOM": "EA"
-        }
-    ])
-
-    edited_items_df = st.data_editor(
-        default_data,
-        num_rows="dynamic",
-        use_container_width=True,
-        column_config={
-            "Material Description": st.column_config.TextColumn(
-                "Material Description",
-                help="Isi part number, material code, atau deskripsi material",
-                required=True
-            ),
-            "Quantity": st.column_config.NumberColumn(
-                "Quantity",
-                min_value=0,
-                step=1,
-                required=True
-            ),
-            "Quantity Received": st.column_config.NumberColumn(
-                "Quantity Received",
-                min_value=0,
-                step=1
-            ),
-            "Job Site": st.column_config.TextColumn("Job Site"),
-            "Destination": st.column_config.TextColumn("Destination"),
-            "UOM": st.column_config.TextColumn("UOM")
-        }
+    st.subheader("📦 Direct Material Paste")
+    st.caption(
+        "Paste langsung dari Excel. Sistem mengambil kolom pertama sebagai Material dan kolom kedua sebagai Quantity jika ada. "
+        "Kolom lain otomatis diabaikan."
     )
 
-    preview_items = prepare_valid_items(edited_items_df)
-    total_preview_qty = sum(item["quantity"] for item in preview_items)
+    bulk_material_text = st.text_area(
+        "Paste Material dari Excel di sini",
+        height=330,
+        placeholder=(
+            "Contoh 1 kolom:\\n"
+            "24122002-0008\\n"
+            "4T-32032X\\n"
+            "4T-32036XE1PX4\\n"
+            "561-22-62970\\n\\n"
+            "Contoh 2 kolom:\\n"
+            "24122002-0008    5\\n"
+            "4T-32032X        2\\n"
+            "4T-32036XE1PX4   1"
+        )
+    )
+
+    valid_items_preview = parse_material_direct_input(bulk_material_text)
+    preview_df = build_preview_dataframe(valid_items_preview)
+
+    total_preview_qty = sum(item["quantity"] for item in valid_items_preview)
 
     col_a, col_b, col_c = st.columns(3)
 
     with col_a:
-        st.metric("Total Item", len(preview_items))
+        st.metric("Total Item Detected", len(valid_items_preview))
 
     with col_b:
         st.metric("Total Quantity", total_preview_qty)
 
     with col_c:
-        st.metric("System Mode", "AUTO")
+        st.metric("Output Sheets", "3 Sheets")
+
+    if not preview_df.empty:
+        st.markdown("### Preview yang akan masuk ke Manifest / Waybill")
+        st.dataframe(
+            preview_df,
+            use_container_width=True,
+            hide_index=True
+        )
+    else:
+        st.info("Belum ada material yang terdeteksi. Paste data material dari Excel terlebih dahulu.")
 
 
 # =========================================================
@@ -727,7 +838,7 @@ with tab2:
 
 with tab3:
     st.subheader("🖼️ Picture Bay - Logistics Evidence Upload")
-    st.caption("Sheet PICTURE akan otomatis dibersihkan. Tidak perlu checkbox. Upload gambar akan masuk ke slot attachment.")
+    st.caption("Sheet PICTURE otomatis dibersihkan. Upload gambar akan masuk ke slot attachment.")
 
     st.markdown('<div class="picture-panel">', unsafe_allow_html=True)
 
@@ -783,21 +894,21 @@ form_data = {
 }
 
 generate = st.button(
-    "🤖 Generate Excel - Deploy Logistics Document",
+    "🤖 Generate Excel - Sheet1 Removed",
     type="primary",
     use_container_width=True
 )
 
 if generate:
-    valid_items = prepare_valid_items(edited_items_df)
+    valid_items = parse_material_direct_input(bulk_material_text)
 
     if len(valid_items) == 0:
-        st.warning("Minimal isi 1 Material Description terlebih dahulu.")
+        st.warning("Minimal paste 1 material terlebih dahulu.")
     else:
         try:
-            excel_file, item_count, total_quantity = generate_excel(
+            result = generate_excel(
                 form_data=form_data,
-                items_df=edited_items_df,
+                valid_items=valid_items,
                 uploaded_images=uploaded_images
             )
 
@@ -807,13 +918,26 @@ if generate:
             excel_filename = f"WBMF_{safe_po_sto}_{safe_wb_number}.xlsx"
 
             st.success(
-                f"Mission complete. Excel berhasil dibuat. "
-                f"Total item: {item_count}, Total quantity: {total_quantity}"
+                f"Mission complete. Excel berhasil dibuat tanpa Sheet1. "
+                f"Input item: {result['total_items_input']}, "
+                f"Manifest inserted: {result['manifest_inserted']}, "
+                f"Waybill inserted: {result['waybill_inserted']}, "
+                f"Total quantity: {result['total_quantity']}"
             )
+
+            if result["manifest_inserted"] < result["total_items_input"]:
+                st.warning(
+                    "Sebagian item tidak masuk ke Manifest karena area row pada template Manifest sudah penuh."
+                )
+
+            if result["waybill_inserted"] < result["total_items_input"]:
+                st.warning(
+                    "Sebagian item tidak masuk ke Waybill karena area row pada template Waybill sudah penuh."
+                )
 
             st.download_button(
                 label="⬇️ Download Excel Output",
-                data=excel_file,
+                data=result["file"],
                 file_name=excel_filename,
                 mime="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
                 use_container_width=True
