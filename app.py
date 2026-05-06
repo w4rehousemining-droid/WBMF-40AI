@@ -30,8 +30,8 @@ TEMPLATE_FILE = "WBMF PO 1011953241 HAJU.xlsx"
 
 def write_cell(ws, cell_address, value):
     """
-    Tulis ke cell biasa.
-    Sheet1 pada template kamu simple, jadi aman.
+    Tulis value ke cell.
+    Dipakai untuk Sheet1.
     """
     ws[cell_address] = value if value not in [None, ""] else "-"
 
@@ -39,7 +39,8 @@ def write_cell(ws, cell_address, value):
 def set_cell_safe(ws, cell_address, value):
     """
     Tulis value ke cell tanpa merusak merged cell.
-    Kalau target adalah merged cell non-utama, value akan ditulis ke cell utama/top-left.
+    Jika cell target adalah merged cell non-utama,
+    maka value akan ditulis ke cell utama/top-left dari merged range.
     """
     cell = ws[cell_address]
 
@@ -72,7 +73,7 @@ def clear_cell_safe(ws, cell_address):
 
 def clear_range_safe(ws, min_row, max_row, columns):
     """
-    Clear area input tanpa unmerge dan tanpa merusak layout.
+    Clear area input tanpa unmerge dan tanpa mengubah layout.
     """
     for row in range(min_row, max_row + 1):
         for col in columns:
@@ -81,7 +82,7 @@ def clear_range_safe(ws, min_row, max_row, columns):
 
 def find_row_by_text(ws, text):
     """
-    Cari row berdasarkan text tertentu.
+    Cari nomor row berdasarkan text tertentu.
     """
     for row in ws.iter_rows():
         for cell in row:
@@ -92,7 +93,7 @@ def find_row_by_text(ws, text):
 
 def prepare_valid_items(items_df):
     """
-    Ambil data material valid dari tabel Streamlit.
+    Ambil data material yang valid dari dataframe Streamlit.
     """
     valid_items = []
 
@@ -146,21 +147,48 @@ def prepare_valid_items(items_df):
 
 def save_uploaded_image_to_temp(uploaded_file):
     """
-    Simpan gambar upload sementara agar bisa dimasukkan ke Excel.
+    Simpan gambar upload ke temporary file tanpa mengubah resolusi asli.
+    Yang akan disesuaikan hanya ukuran tampilan gambar di Excel.
     """
     uploaded_file.seek(0)
-    image = Image.open(uploaded_file)
-    image.thumbnail((1000, 1000))
 
-    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
-    image.save(temp_file.name, format="PNG")
+    file_ext = os.path.splitext(uploaded_file.name)[1].lower()
+
+    if file_ext not in [".png", ".jpg", ".jpeg"]:
+        file_ext = ".png"
+
+    temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=file_ext)
+    temp_file.write(uploaded_file.getbuffer())
+    temp_file.close()
 
     return temp_file.name
 
 
+def get_fitted_image_size(image_path, max_width=360, max_height=260):
+    """
+    Hitung ukuran tampilan gambar agar pas di area Excel.
+    Resolusi file asli tidak diubah.
+    """
+    with Image.open(image_path) as img:
+        original_width, original_height = img.size
+
+    if original_width == 0 or original_height == 0:
+        return max_width, max_height
+
+    ratio = min(
+        max_width / original_width,
+        max_height / original_height
+    )
+
+    display_width = int(original_width * ratio)
+    display_height = int(original_height * ratio)
+
+    return display_width, display_height
+
+
 def safe_filename(text):
     """
-    Bersihkan nama file dari karakter yang tidak aman.
+    Bersihkan nama file dari karakter yang tidak aman untuk Windows.
     """
     text = str(text)
     invalid_chars = ['/', '\\', ':', '*', '?', '"', '<', '>', '|']
@@ -175,7 +203,7 @@ def safe_filename(text):
 # GENERATE EXCEL SESUAI TEMPLATE ASLI
 # =========================================================
 
-def generate_excel(form_data, items_df, uploaded_images, clear_old_pictures=False):
+def generate_excel(form_data, items_df, uploaded_images, clear_old_pictures=True):
     """
     Generate Excel dengan mempertahankan format template asli.
     Tidak unmerge.
@@ -192,7 +220,6 @@ def generate_excel(form_data, items_df, uploaded_images, clear_old_pictures=Fals
     # =====================================================
     # UPDATE SHEET1
     # =====================================================
-    # Header Manifest dan Waybill pada template terhubung ke Sheet1.
 
     write_cell(ws_input, "B1", form_data["mf_number"])
     write_cell(ws_input, "B2", form_data["wb_number"])
@@ -217,7 +244,7 @@ def generate_excel(form_data, items_df, uploaded_images, clear_old_pictures=Fals
     # =====================================================
     # UPDATE MANIFEST
     # =====================================================
-    # Berdasarkan template:
+    # Manifest:
     # A = No.
     # B = Waybill No.
     # C = Description
@@ -252,7 +279,7 @@ def generate_excel(form_data, items_df, uploaded_images, clear_old_pictures=Fals
 
         total_quantity += item["quantity"]
 
-        # Template Manifest kamu memakai jarak 2 row antar item.
+        # Template Manifest menggunakan jarak 2 row antar item.
         manifest_row += 2
 
     if total_qty_row:
@@ -261,7 +288,7 @@ def generate_excel(form_data, items_df, uploaded_images, clear_old_pictures=Fals
     # =====================================================
     # UPDATE WAYBILL
     # =====================================================
-    # Berdasarkan template:
+    # Waybill:
     # A = No. Item
     # C = Item Name / Description
     # H = Job Site
@@ -300,24 +327,38 @@ def generate_excel(form_data, items_df, uploaded_images, clear_old_pictures=Fals
     # =====================================================
 
     if clear_old_pictures:
+        # Hapus gambar contoh/lama agar upload baru tidak tertimpa.
         ws_picture._images = []
 
     if uploaded_images:
-        picture_cells = [
-            "B3", "K3",
-            "B28", "K28",
-            "B53", "K53",
-            "B78", "K78"
+        picture_slots = [
+            {"cell": "B3", "max_width": 360, "max_height": 260},
+            {"cell": "K3", "max_width": 360, "max_height": 260},
+            {"cell": "B28", "max_width": 360, "max_height": 260},
+            {"cell": "K28", "max_width": 360, "max_height": 260},
+            {"cell": "B53", "max_width": 360, "max_height": 260},
+            {"cell": "K53", "max_width": 360, "max_height": 260},
+            {"cell": "B78", "max_width": 360, "max_height": 260},
+            {"cell": "K78", "max_width": 360, "max_height": 260},
         ]
 
-        for uploaded_file, anchor_cell in zip(uploaded_images, picture_cells):
+        for uploaded_file, slot in zip(uploaded_images, picture_slots):
             temp_image_path = save_uploaded_image_to_temp(uploaded_file)
 
             img = XLImage(temp_image_path)
-            img.width = 320
-            img.height = 240
 
-            ws_picture.add_image(img, anchor_cell)
+            display_width, display_height = get_fitted_image_size(
+                temp_image_path,
+                max_width=slot["max_width"],
+                max_height=slot["max_height"]
+            )
+
+            # Ini hanya mengubah ukuran tampilan di Excel,
+            # bukan mengubah resolusi asli file gambar.
+            img.width = display_width
+            img.height = display_height
+
+            ws_picture.add_image(img, slot["cell"])
 
     # Paksa Excel recalculate formula saat file dibuka.
     wb.calculation.fullCalcOnLoad = True
@@ -415,7 +456,7 @@ st.title("📦 WBMF-40AI Manifest & Waybill Generator")
 
 st.write(
     "Input data dari Streamlit, lalu generate Excel sesuai template asli. "
-    "PDF akan dibuat dari Excel agar format Manifest dan Waybill tetap sama."
+    "PDF dibuat dari Excel agar format Manifest dan Waybill tetap sama."
 )
 
 if not os.path.exists(TEMPLATE_FILE):
@@ -431,12 +472,19 @@ with st.sidebar:
 
     st.divider()
 
-    st.header("⚙️ Opsi")
+    st.header("⚙️ Opsi Picture")
     clear_old_pictures = st.checkbox(
-        "Hapus gambar lama di sheet PICTURE",
-        value=False
+        "Hapus gambar contoh/lama di sheet PICTURE",
+        value=True
     )
 
+    st.caption(
+        "Jika dicentang, gambar contoh di sheet PICTURE akan dihapus sebelum gambar baru dimasukkan."
+    )
+
+    st.divider()
+
+    st.header("📄 PDF")
     st.caption(
         "PDF exact format membutuhkan Microsoft Excel desktop di Windows."
     )
