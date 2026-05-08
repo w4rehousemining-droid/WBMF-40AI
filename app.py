@@ -141,10 +141,6 @@ st.markdown(
 # =========================================================
 
 def set_cell_safe(ws, address, value):
-    """
-    Isi cell biasa atau merged cell.
-    Jika target address adalah bagian merged cell, value ditulis ke top-left cell.
-    """
     value = value if value not in [None, ""] else "-"
     cell = ws[address]
 
@@ -171,10 +167,8 @@ def find_row_by_text(ws, text):
 
 def safe_filename(text):
     text = str(text)
-
     for char in ['/', '\\', ':', '*', '?', '"', '<', '>', '|']:
         text = text.replace(char, "-")
-
     return text
 
 
@@ -187,25 +181,19 @@ def split_lines(text):
 
 
 def get_line(lines, index, default=""):
-    if index < len(lines):
-        return lines[index].strip()
-
-    return default
+    return lines[index].strip() if index < len(lines) else default
 
 
 def normalize_text(value, default="-"):
     value = str(value).strip()
-
     if value == "" or value.lower() == "nan":
         return default
-
     return value
 
 
 def normalize_qty(value, default=1):
     try:
         value = str(value).strip().replace(",", ".")
-
         if value == "":
             return default
 
@@ -230,10 +218,6 @@ def unhide_rows(ws, start_row, end_row):
 
 
 def unmerge_overlapping_ranges(ws, start_row, end_row):
-    """
-    Unmerge hanya area detail yang bersentuhan dengan range row detail.
-    Header tidak diubah.
-    """
     merged_ranges = list(ws.merged_cells.ranges)
 
     for merged_range in merged_ranges:
@@ -249,15 +233,6 @@ def merge_if_not_merged(ws, cell_range):
 
 
 def apply_manifest_detail_merges(ws, row):
-    """
-    Manifest detail:
-    A   = No.
-    B   = Waybill No.
-    C:H = Description
-    I:J = Quantity
-    K:O = Destination
-    P:Q = UOM
-    """
     merge_if_not_merged(ws, f"C{row}:H{row}")
     merge_if_not_merged(ws, f"I{row}:J{row}")
     merge_if_not_merged(ws, f"K{row}:O{row}")
@@ -265,15 +240,6 @@ def apply_manifest_detail_merges(ws, row):
 
 
 def apply_waybill_detail_merges(ws, row):
-    """
-    Waybill detail:
-    A:B = No. Item
-    C:G = Description
-    H:J = Job Site
-    K:L = Destination
-    M:N = Quantity Delivered
-    O:P = Quantity Received
-    """
     merge_if_not_merged(ws, f"A{row}:B{row}")
     merge_if_not_merged(ws, f"C{row}:G{row}")
     merge_if_not_merged(ws, f"H{row}:J{row}")
@@ -294,9 +260,6 @@ def copy_cell_style(source, target):
 
 
 def copy_row_format(ws, source_row, target_row, max_col=17):
-    """
-    Copy format row tanpa value.
-    """
     ws.row_dimensions[target_row].height = ws.row_dimensions[source_row].height
     ws.row_dimensions[target_row].hidden = False
 
@@ -314,36 +277,65 @@ def clear_row_values(ws, row, max_col=17):
             cell.value = None
 
 
-def ensure_detail_rows(ws, start_row, marker_text, item_count, style_row):
+def compact_detail_rows(ws, start_row, marker_text, item_count, style_row):
     """
-    Pastikan row detail cukup.
-    1 item = 1 row.
-    Jika kurang, insert row sebelum marker row.
+    Membuat detail area compact:
+    - 1 item = 1 row
+    - Jika row kurang, insert row
+    - Jika row sisa, delete row
+    - Marker seperti Prepared By / Total Quantity langsung naik setelah item terakhir
     """
     marker_row = find_row_by_text(ws, marker_text)
 
     if marker_row is None:
         marker_row = start_row + 30
 
-    end_row = marker_row - 1
+    current_end_row = marker_row - 1
     required_end_row = start_row + item_count - 1
+    required_marker_row = start_row + item_count
 
-    if item_count > 0 and required_end_row > end_row:
-        rows_to_add = required_end_row - end_row
+    # Tambah row jika kurang
+    if item_count > 0 and required_end_row > current_end_row:
+        rows_to_add = required_end_row - current_end_row
         ws.insert_rows(marker_row, rows_to_add)
 
         for row in range(marker_row, marker_row + rows_to_add):
             copy_row_format(ws, style_row, row, max_col=17)
 
         marker_row = find_row_by_text(ws, marker_text)
-        end_row = marker_row - 1
+        current_end_row = marker_row - 1
 
-    unhide_rows(ws, start_row, end_row)
-    unmerge_overlapping_ranges(ws, start_row, end_row)
+    # Unmerge area lama sebelum delete/format ulang
+    if current_end_row >= start_row:
+        unhide_rows(ws, start_row, current_end_row)
+        unmerge_overlapping_ranges(ws, start_row, current_end_row)
 
-    for row in range(start_row, end_row + 1):
-        copy_row_format(ws, style_row, row, max_col=17)
-        clear_row_values(ws, row, max_col=17)
+    # Delete row sisa supaya Prepared By / Total Quantity naik tepat setelah item terakhir
+    marker_row = find_row_by_text(ws, marker_text)
+
+    if marker_row is None:
+        marker_row = required_marker_row
+
+    if marker_row > required_marker_row:
+        rows_to_delete = marker_row - required_marker_row
+        ws.delete_rows(required_marker_row, rows_to_delete)
+
+    # Re-find marker setelah delete
+    marker_row = find_row_by_text(ws, marker_text)
+
+    if marker_row is None:
+        marker_row = required_marker_row
+
+    end_row = marker_row - 1
+
+    # Format dan clear hanya row detail yang dipakai
+    if item_count > 0:
+        unhide_rows(ws, start_row, end_row)
+        unmerge_overlapping_ranges(ws, start_row, end_row)
+
+        for row in range(start_row, end_row + 1):
+            copy_row_format(ws, style_row, row, max_col=17)
+            clear_row_values(ws, row, max_col=17)
 
     return start_row, end_row, marker_row
 
@@ -545,16 +537,14 @@ def generate_excel(form, items, uploaded_images):
     ws_waybill = wb["Waybill"]
     ws_picture = wb["PICTURE"]
 
-    # Header direct tanpa Sheet1
     write_manifest_header(ws_manifest, form)
     write_waybill_header(ws_waybill, form)
 
     # =====================================================
     # MANIFEST DETAIL
-    # 1 item = 1 row, merge hanya kolom yang perlu
     # =====================================================
 
-    manifest_start, manifest_end, total_qty_row = ensure_detail_rows(
+    manifest_start, manifest_end, total_qty_row = compact_detail_rows(
         ws=ws_manifest,
         start_row=17,
         marker_text="Total Quantity",
@@ -589,10 +579,9 @@ def generate_excel(form, items, uploaded_images):
 
     # =====================================================
     # WAYBILL DETAIL
-    # 1 item = 1 row, merge hanya kolom yang perlu
     # =====================================================
 
-    waybill_start, waybill_end, prepared_row = ensure_detail_rows(
+    waybill_start, waybill_end, prepared_row = compact_detail_rows(
         ws=ws_waybill,
         start_row=8,
         marker_text="Prepared By",
@@ -620,10 +609,8 @@ def generate_excel(form, items, uploaded_images):
 
         waybill_inserted += 1
 
-    # Picture
     insert_pictures(ws_picture, uploaded_images)
 
-    # Remove Sheet1 from output
     remove_sheet1_if_exists(wb)
 
     output = BytesIO()
@@ -648,10 +635,10 @@ st.markdown(
     <div class="robot-header">
         <p class="robot-title">🤖 WBMF-40AI Logistics Robot</p>
         <div class="robot-subtitle">
-            Direct input to Manifest and Waybill. Detail 1 baris per material, merge hanya kolom yang perlu.
+            Direct input to Manifest and Waybill. Sisa row kosong otomatis dihapus.
         </div>
-        <span class="robot-badge">📦 Manifest Row 17,18,19...</span>
-        <span class="robot-badge">🚚 Waybill Row 8,9,10...</span>
+        <span class="robot-badge">📦 Compact Manifest</span>
+        <span class="robot-badge">🚚 Compact Waybill</span>
         <span class="robot-badge">🧾 Sheet1 Removed</span>
         <span class="robot-badge">🖼️ Picture Auto Clean</span>
     </div>
@@ -709,7 +696,7 @@ with tab1:
 
 with tab2:
     st.subheader("📦 Input Kolom Excel")
-    st.caption("Copy kolom dari Excel ke bawah. Output detail 1 item = 1 baris, merge hanya kolom yang perlu.")
+    st.caption("Copy kolom dari Excel ke bawah. Sisa row kosong di output akan otomatis dihapus.")
 
     col_desc, col_qty_del, col_qty_rec = st.columns([3, 1, 1])
 
@@ -778,7 +765,7 @@ with tab2:
         st.metric("Total Quantity", total_qty)
 
     with metric_3:
-        st.metric("Detail Mode", "1 Row + Merge")
+        st.metric("Output Mode", "Compact")
 
     if not preview_df.empty:
         st.dataframe(preview_df, use_container_width=True, hide_index=True)
