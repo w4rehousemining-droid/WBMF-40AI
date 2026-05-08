@@ -10,6 +10,8 @@ from PIL import Image
 from openpyxl import load_workbook
 from openpyxl.drawing.image import Image as XLImage
 from openpyxl.cell.cell import MergedCell
+from openpyxl.worksheet.pagebreak import RowBreak, ColBreak
+from openpyxl.worksheet.properties import PageSetupProperties
 
 
 # =========================================================
@@ -294,7 +296,6 @@ def compact_detail_rows(ws, start_row, marker_text, item_count, style_row):
     required_end_row = start_row + item_count - 1
     required_marker_row = start_row + item_count
 
-    # Tambah row jika kurang
     if item_count > 0 and required_end_row > current_end_row:
         rows_to_add = required_end_row - current_end_row
         ws.insert_rows(marker_row, rows_to_add)
@@ -305,12 +306,10 @@ def compact_detail_rows(ws, start_row, marker_text, item_count, style_row):
         marker_row = find_row_by_text(ws, marker_text)
         current_end_row = marker_row - 1
 
-    # Unmerge area lama sebelum delete/format ulang
     if current_end_row >= start_row:
         unhide_rows(ws, start_row, current_end_row)
         unmerge_overlapping_ranges(ws, start_row, current_end_row)
 
-    # Delete row sisa supaya Prepared By / Total Quantity naik tepat setelah item terakhir
     marker_row = find_row_by_text(ws, marker_text)
 
     if marker_row is None:
@@ -320,7 +319,6 @@ def compact_detail_rows(ws, start_row, marker_text, item_count, style_row):
         rows_to_delete = marker_row - required_marker_row
         ws.delete_rows(required_marker_row, rows_to_delete)
 
-    # Re-find marker setelah delete
     marker_row = find_row_by_text(ws, marker_text)
 
     if marker_row is None:
@@ -328,7 +326,6 @@ def compact_detail_rows(ws, start_row, marker_text, item_count, style_row):
 
     end_row = marker_row - 1
 
-    # Format dan clear hanya row detail yang dipakai
     if item_count > 0:
         unhide_rows(ws, start_row, end_row)
         unmerge_overlapping_ranges(ws, start_row, end_row)
@@ -338,6 +335,69 @@ def compact_detail_rows(ws, start_row, marker_text, item_count, style_row):
             clear_row_values(ws, row, max_col=17)
 
     return start_row, end_row, marker_row
+
+
+# =========================================================
+# PRINT LAYOUT HELPERS
+# =========================================================
+
+def get_last_used_row(ws, max_col=17):
+    """
+    Cari row terakhir yang benar-benar ada isi.
+    Ini mencegah print area mengambil row kosong terlalu panjang.
+    """
+    for row in range(ws.max_row, 1, -1):
+        for col in range(1, max_col + 1):
+            value = ws.cell(row=row, column=col).value
+
+            if value not in [None, ""]:
+                return row
+
+    return 1
+
+
+def setup_print_layout(ws, end_col="Q", orientation="landscape"):
+    """
+    Setup print agar hasil tidak kecil:
+    - Print area hanya sampai row terakhir yang ada isi
+    - Fit hanya ke lebar 1 halaman
+    - Tinggi tidak dipaksa 1 halaman
+    - Margin diperkecil
+    """
+    last_row = get_last_used_row(ws, max_col=17)
+
+    ws.print_area = f"A1:{end_col}{last_row}"
+
+    ws.row_breaks = RowBreak()
+    ws.col_breaks = ColBreak()
+
+    if ws.sheet_properties.pageSetUpPr is None:
+        ws.sheet_properties.pageSetUpPr = PageSetupProperties(fitToPage=True)
+    else:
+        ws.sheet_properties.pageSetUpPr.fitToPage = True
+
+    ws.page_setup.orientation = orientation
+    ws.page_setup.paperSize = 9  # A4
+    ws.page_setup.fitToWidth = 1
+    ws.page_setup.fitToHeight = 0
+
+    ws.page_margins.left = 0.20
+    ws.page_margins.right = 0.20
+    ws.page_margins.top = 0.25
+    ws.page_margins.bottom = 0.25
+    ws.page_margins.header = 0.10
+    ws.page_margins.footer = 0.10
+
+    ws.print_options.horizontalCentered = True
+    ws.print_options.verticalCentered = False
+
+    ws.sheet_view.view = "normal"
+
+
+def setup_all_print_layouts(ws_manifest, ws_waybill, ws_picture):
+    setup_print_layout(ws_manifest, end_col="Q", orientation="landscape")
+    setup_print_layout(ws_waybill, end_col="Q", orientation="landscape")
+    setup_print_layout(ws_picture, end_col="Q", orientation="landscape")
 
 
 # =========================================================
@@ -613,6 +673,12 @@ def generate_excel(form, items, uploaded_images):
 
     remove_sheet1_if_exists(wb)
 
+    setup_all_print_layouts(
+        ws_manifest=ws_manifest,
+        ws_waybill=ws_waybill,
+        ws_picture=ws_picture
+    )
+
     output = BytesIO()
     wb.save(output)
     output.seek(0)
@@ -635,10 +701,11 @@ st.markdown(
     <div class="robot-header">
         <p class="robot-title">🤖 WBMF-40AI Logistics Robot</p>
         <div class="robot-subtitle">
-            Direct input to Manifest and Waybill. Sisa row kosong otomatis dihapus.
+            Direct input to Manifest and Waybill. Print layout sudah disesuaikan agar tidak kecil.
         </div>
         <span class="robot-badge">📦 Compact Manifest</span>
         <span class="robot-badge">🚚 Compact Waybill</span>
+        <span class="robot-badge">🖨️ Print Optimized</span>
         <span class="robot-badge">🧾 Sheet1 Removed</span>
         <span class="robot-badge">🖼️ Picture Auto Clean</span>
     </div>
@@ -696,7 +763,7 @@ with tab1:
 
 with tab2:
     st.subheader("📦 Input Kolom Excel")
-    st.caption("Copy kolom dari Excel ke bawah. Sisa row kosong di output akan otomatis dihapus.")
+    st.caption("Copy kolom dari Excel ke bawah. Print area otomatis mengikuti data yang ada.")
 
     col_desc, col_qty_del, col_qty_rec = st.columns([3, 1, 1])
 
@@ -765,7 +832,7 @@ with tab2:
         st.metric("Total Quantity", total_qty)
 
     with metric_3:
-        st.metric("Output Mode", "Compact")
+        st.metric("Print Mode", "Optimized")
 
     if not preview_df.empty:
         st.dataframe(preview_df, use_container_width=True, hide_index=True)
